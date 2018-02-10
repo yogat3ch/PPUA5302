@@ -1,0 +1,97 @@
+---
+title: "Text Analysis"
+author: "Stephen Synchronicity"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+always_allow_html: yes
+header-includes:
+   - \usepackage{dcolumn}
+output: 
+  html_document: 
+    self_contained: false
+    css: C:\Users\Stephen\Documents\R\win-library\3.4\neuhwk\rmarkdown\templates\report\resources\bootstrap.min.css
+    highlight: zenburn
+    keep_md: no
+    theme: spacelab
+    toc: yes
+    toc_float: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE, fig.align='center', fig.height=3.5, fig.width=5, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+rmarkdown::html_dependency_jquery()
+rmarkdown::html_dependency_bootstrap("spacelab")
+rmarkdown::html_dependency_jqueryui()
+set.seed(1)
+require("tidyverse")
+require("dplyr")
+require("htmltools")
+require("SnowballC")
+require("tm")
+require("wordcloud")
+require("wordcloud2")
+require("lubridate")
+```
+
+```{r 'Import Rescuetime Data'}
+RT <- read_csv(file="~/Northeastern/Git/ppua5302/Project 1/Data/RescueTime_Report_All_Activities__by_week_2017-01-01.csv",col_names = T)
+View(RT)
+RT$Date <- ymd(RT$Date)
+```
+```{r 'Create Three Corpus'}
+Pro <- RT %>% filter(Productivity>0) %>% select(Activity,Productivity)
+Dis <- RT %>% filter(Productivity<0) %>% select(Activity,Productivity)
+Neu <- RT %>% filter(Productivity==0) %>% select(Activity,Productivity)
+Neu <- subset(Neu,!str_detect(Neu$Activity,"time setup"))
+
+
+CPro <- VCorpus(VectorSource(enc2utf8(Pro$Activity)))
+DPro <- VCorpus(VectorSource(enc2utf8(Dis$Activity)))
+NPro <- VCorpus(VectorSource(enc2utf8(Neu$Activity)))
+Corpi <- list(CPro=CPro,DPro=DPro,NPro=NPro)
+for (i in seq_along(Corpi)) {
+  print(i)
+  #remove punctuation
+#change to lower case
+Corpi[[i]]<- tm_map(Corpi[[i]], content_transformer(tolower))
+#Remove numbers
+#Remove white space
+Corpi[[i]]<- tm_map(Corpi[[i]], stripWhitespace)
+#Stem document
+Corpi[[i]]<- tm_map(Corpi[[i]], stemDocument)
+#remove stop words
+Corpi[[i]]<- tm_map(Corpi[[i]],removeWords, stopwords("english"))
+Corpi[[i]][[2]] <-TermDocumentMatrix(Corpi[[i]])
+Corpi[[i]][[2]] <-as.matrix(Corpi[[i]][[2]])
+Corpi[[i]][[2]] <- sort(rowSums(Corpi[[i]][[2]]),decreasing = TRUE)
+Corpi[[i]][[2]] <-data.frame(word=names(Corpi[[i]][[2]]),freq=Corpi[[i]][[2]])
+}
+# Weights <- vector()
+# for (i in seq_along(Corpi[[1]][[2]]$word)) {
+#   Weights[i] <- Pro$Productivity[which(str_detect(Pro$Activity,ignore.case(as.character(Corpi[[1]][[2]]$word[i]))))[1]]
+# }
+# Weights[is.na(Weights)] <- 1
+# Corpi[[1]][[2]]$wgts <- Weights
+dcolor <- c("#FF7549",	"#DE653F",	"#C1502D",	"#A63C1B",	"#8C2A0B")
+pcolor <- c("#3579A2",	"#296990",	"#1F5B80",	"#164F71",	"#0E415F")
+ncolor <- c("#FFFFFF",	"#DEDEDE",	"#BABABA",	"#9D9D9D",	"#7E7E7E")
+Corpi[[1]][[2]] <- Corpi[[1]][[2]] %>% mutate(Z=as.vector(scale(freq))) %>% filter(Z<3.7)
+ProCorp <- Corpi[[1]][[2]]
+Corpi[[1]][[2]] <- ProCorp
+figPath = system.file("C:\\Users\\Stephen\\Documents\\Northeastern\\Git\\ppua5302\\Project 1\\Square.png")
+(prodWC <- wordcloud2(Corpi[[1]][[2]],size=.60,fontFamily = "Helvetica",fontWeight = "normal",color=rep(pcolor,100),backgroundColor = "#00010F",ellipticity = .2))
+(distWC <- wordcloud2(distWC,size=.75,fontFamily = "Helvetica",fontWeight = "normal",color=rep(dcolor,20),backgroundColor = "#00010F",ellipticity = .9))
+(neutWC <- wordcloud2(neutWC,size=.75,fontFamily = "Helvetica",fontWeight = "normal",color=rep(ncolor,50),backgroundColor = "#00010F",ellipticity = 1))
+library("htmlwidgets")
+neutWC <- Corpi[[3]][[2]]
+fix(neutWC)
+neutWC <- editData::editData(neutWC)
+distWC <- Corpi[[2]][[2]]
+distWC <- editData::editData(distWC)
+fix(distWC)
+saveWidget(prodWC,"prodWC.html",selfcontained = F)
+saveWidget(distWC,"distWC.html",selfcontained = F)
+saveWidget(neutWC,"neutWC.html",selfcontained = F)
+save(Corpi,file="Corpi.RData")
+load(file="Corpi.RData")
+```
+
+

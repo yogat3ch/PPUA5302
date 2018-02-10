@@ -1,0 +1,326 @@
+---
+title: "Scraper"
+author: "Stephen Synchronicity"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+always_allow_html: yes
+header-includes:
+   - \usepackage{dcolumn}
+output: 
+  html_document: 
+    css: bootstrap.min.css
+    highlight: zenburn
+    keep_md: yes
+    theme: spacelab
+    toc_float: true
+    toc: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE, fig.align='center', fig.height=5, fig.width=7, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+rmarkdown::html_dependency_jquery()
+rmarkdown::html_dependency_bootstrap("spacelab")
+rmarkdown::html_dependency_jqueryui()
+set.seed(1)
+library("tidyverse")
+library("dplyr")
+library("htmltools")
+library("rvest")
+library("stringr")
+library("lubridate")
+library(plyr)
+theme_blue = function(base_size = 11, base_family = "") {
+ 
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+ 
+    theme(line  = element_line(colour = "white", size = I(1.5), linetype = "solid",
+  lineend = "round", arrow = NULL, inherit.blank = FALSE),
+rect  = element_rect(fill = "#00010F", colour = "#00010F", size = 0, linetype = "solid", inherit.blank = FALSE),
+text  = element_text(family = "Helvetica", face = "plain", colour = "white", size = base_size,hjust = I(.5), vjust = I(.5), angle = 0, lineheight = base_size,color = NULL,margin = margin(I(.2),I(.2),I(.2),I(.2),unit="pt"),debug=F, inherit.blank = FALSE),
+title  = element_text(family = "AvantGarde", face = "plain", colour = "white", size = I(base_size),hjust = I(.5), vjust = I(1), angle = 0, lineheight = I(base_size),color = NULL,margin = margin(I(1),I(1),I(1),I(1),unit="pt"), inherit.blank = FALSE),
+      # Specify axis options
+      axis.line  = element_line(colour = "#3A42B0", size = 1, linetype = "solid",
+  lineend = "round", inherit.blank = FALSE),  
+      axis.text.x = element_text(size = base_size*0.6, color = "white", lineheight = 0.6,hjust = I(1), vjust = I(1),angle=60),  
+      axis.text.y = element_text(size = base_size*0.6, color = "white", lineheight = 0.9,hjust = I(.5), vjust = I(1),angle=60),  
+      axis.ticks = element_line(colour = "#3A42B0", size  =  0.2),
+      axis.title  = element_text(family = "Helvetica", face = "italic", colour = "white", size = I(base_size*1),hjust = I(.5), vjust = I(.5), lineheight = I(base_size*1), inherit.blank = FALSE),
+      axis.title.x = element_text(size = base_size, color = "white", margin = margin(0, .5, 0, 0)),  
+      axis.title.y = element_text(size = base_size, color = "white", angle = 90, margin = margin(0, .5, 0, 0)),  
+      axis.ticks.length = unit(0.3, "lines"),   
+      # Specify legend options
+      legend.background = element_rect(color = NA, fill = "#060713"),  
+      legend.key = element_rect(color = "white",  fill = "black"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*0.8, color = "white"),  
+      legend.title = element_text(size = base_size*0.8, face = "bold", hjust = 0, color = "white"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background  = element_rect(fill = "#060713",color="#060713", inherit.blank = FALSE),  
+      panel.border = element_rect(fill = NA, color = NA),  
+      panel.grid.major  = element_line(colour = "#34415B", size = I(.1), linetype = "solid",lineend = "butt", inherit.blank = FALSE),
+panel.grid.minor  = element_line(colour = "#1C2D52", size = I(.1), linetype = "dotted",lineend = "butt", inherit.blank = FALSE), 
+      panel.spacing = margin(rep(0,4),unit="pt"),   
+      # Specify facetting options
+      strip.background = element_rect(fill = "#060713", color = "#060713"),  
+      strip.text.x = element_text(size = base_size*0.8, color = "white"),  
+      strip.text.y = element_text(size = base_size*0.8, color = "white",angle = -90),  
+      # Specify plot options
+      plot.background  = element_rect(fill = "#00010F",colour = "#00010F", linetype = "solid", inherit.blank = FALSE),  
+      plot.title = element_text(family=base_family,size = base_size, color = "white", lineheight = I(1.2),vjust=1),
+      plot.subtitle  = element_text( size = I(base_size*.8),hjust = I(.5),vjust=1, lineheight = I(1.2), inherit.blank = FALSE),
+      plot.margin = margin(.2,.2,.2,.2,unit="cm")
+ 
+    )
+ 
+}
+update_geom_defaults("bar",   list(fill = "#0686DB"))
+theme_set(theme_blue(base_family = "AvantGarde"))
+update_geom_defaults("text",list(colour="white",size=rel(2.5)))
+windowsFonts(AvantGarde=windowsFont("TT AvantGarde-Book"))
+windowsFonts(Helvetica=windowsFont("TT Helvetica"))
+plot(1:10)
+text(5,2,"AvantGarde",family="AvantGarde")
+options(scipen=12)
+
+```
+```{r 'Load Data'}
+Meditation <- read.csv("~/Northeastern/Git/ppua5302/Project 1/Data/insight_sessions_export.csv",header=T,sep=",")
+library(lubridate)
+names(Meditation) <- c("Time","Duration","Activity","Preset")
+Meditation$Time <- mdy_hms(Meditation$Time)
+Meditation$Duration <- as.numeric(as.character(Meditation$Duration))
+```
+```{r 'Filter Data and add to Sheet',eval=F}
+GsheetUpdate <- Meditation %>% filter(Time>mdy("07-13-2017"))
+names(GsheetUpdate) <- c("Started At","Duration (minutes)","Activity","Preset")
+library(googlesheets)
+gs_auth()
+MedTrack <- gs_url("https://docs.google.com/spreadsheets/d/19Pz41A0dq0DsJIBuFO0VOw0fXAmzxO7UOa7bHKcIgYQ/edit#gid=1807004634")
+gs_edit_cells(MedTrack,ws=2,input=GsheetUpdate,anchor = "A4095")
+```
+```{r 'DFs of Activities'}
+Med17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Meditation") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
+Yoga17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Yoga") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
+Plyo17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Walking") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
+```
+```{r 'Import Rescuetime Data'}
+RT <- read_csv(file="~/Northeastern/Git/ppua5302/Project 1/Data/RescueTime_Report_All_Activities__by_week_2017-01-01.csv",col_names = T)
+View(RT)
+RT$Date <- ymd(RT$Date)
+class(RT$`Productivity`)
+```
+```{r 'Color Schema'}
+#http://colorschemedesigner.com/csd-3.5/
+ColorKey <- c("Base","Darker","Darkest","LightBold","LightLight") 
+MonoDarkBlue <- c("#00021B",	"#060713",	"#00010F",	"#3A42B0",	"#686DB0")
+CompGold <- c("#B48B18",	"#1B1608",	"#161000",	"#B4943B",	"#B4A06A")
+AnalogicViolet <- c("#230159",	"#0B0612",	"#06000F",	"#6839B0",	"#8467B0")
+AnalogicTurquoise <- c("#00395B",	"#050D11",	"#00090E",	"#3983AF",	"#6794AF")
+ColorMatrix <- matrix(data=c(MonoDarkBlue,CompGold,AnalogicViolet,AnalogicTurquoise),nrow=4,ncol=5,byrow=T,dimnames=list(c("MonoDarkBlue","CompGold","AnalogicViolet","AnalogicTurquoise"),ColorKey))
+write_csv(as.data.frame(ColorMatrix),path="ColorMatrix.csv")
+```
+```{r 'Totals'}
+RTOV <- RT %>% group_by(Overview,Category) %>% summarize(`Total Time`=sum(`Time Spent (seconds)`)/3600) %>% arrange(desc(`Total Time`)) %>% filter(`Total Time`>1)
+TotalHrs <- sum(RTOV$`Total Time`[!is.na(RTOV$`Total Time`)])
+TotalHrs
+TtlProd <- RT %>% filter(Productivity>0) %>% select(`Time Spent (seconds)`) %>% colSums()
+TtlDist <- RT %>% filter(Productivity<0) %>% select(`Time Spent (seconds)`) %>% colSums()
+(TtlProd/3600)/(TtlDist/3600)
+sum(MedbyWeek$Sum)
+sum(Yoga17$Duration)/60
+TotalR <- RT %>% mutate(R=str_detect(Activity,"rstudio")) %>% filter(R==T) %>% select(-R) %>% select(`Time Spent (seconds)`) %>% colSums()
+TotalR/3600
+(RT %>% filter(Date=="2017-01-01") %>%  group_by(Date) %>% summarise_each(funs(mean, max, sum, n_distinct), `Time Spent (seconds)`) %>% ungroup() %>% select(`Time Spent (seconds)_sum`))/3600
+```
+```{r 'Graph 1 - Timeseries',fig.width=10,fig.height=4,warning=F,message=F}
+MedbyWeek <- Med17 %>% group_by(Weeknum) %>% summarize(Sum=round(sum(Duration)/60,2))
+ProbyWeek <- RT %>% filter(Productivity>0) %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
+DisbyWeek <- RT %>% filter(Productivity<0) %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
+RbyWeek <- RT %>% filter(Activity=="rstudio") %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
+Actcolors <- c("Meditation"="#6839B0","Productivity"="#357AA2","Distraction"="#FF7549","RStudio"="#75AADB")
+#https://stackoverflow.com/questions/7549694/adding-regression-line-equation-and-r2-on-graph
+lm_eqn = function(m) {
+
+  l <- list(a = format(coef(m)[1], digits = 2),
+      b = format(abs(coef(m)[2]), digits = 2),
+      r2 = format(summary(m)$r.squared, digits = 3));
+
+  if (coef(m)[2] >= 0)  {
+    eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(r)^2~"="~r2,l)
+  } else {
+    eq <- substitute(italic(y) == a - b %.% italic(x)*","~~italic(r)^2~"="~r2,l)    
+  }
+
+  as.character(as.expression(eq));                 
+}
+RStudioLM <- lm(Sum ~ Weeknum, RbyWeek)
+RStudioLM$coefficients
+LM <- RbyWeek %>% mutate(LM=predict(RStudioLM,newdata = RbyWeek)) %>% filter(LM>0)
+
+ggplot(mapping=aes(x=Weeknum))+
+geom_line(data=ProbyWeek,mapping=aes(y=Sum,colour="Productivity"))+
+geom_line(data=DisbyWeek,mapping=aes(y=Sum,colour="Distraction"))+
+geom_line(data=RbyWeek,mapping=aes(y=Sum,colour="RStudio"))+
+geom_line(data=LM,mapping=aes(y=LM,colour="RStudio"),size=.5)+
+  geom_text(aes(x = 45, y = 1, label = lm_eqn(RStudioLM)),colour="#75AADB",size=4, parse = TRUE)+
+geom_point(data=ProbyWeek,mapping=aes(y=Sum,colour="Productivity"),shape=24,fill="#357AA2")+
+geom_point(data=DisbyWeek,mapping=aes(y=Sum,colour="Distraction"),shape=25,fill="#FF7549")+
+geom_point(data=RbyWeek,mapping=aes(y=Sum,colour="RStudio"),colour="#75AADB")+
+  scale_x_discrete(limits=seq(0,54,2))+
+scale_y_continuous(minor_breaks = seq(0, 50, 1),breaks=seq(0,50,4))+
+  theme(legend.position = "bottom",legend.direction="horizontal")+
+  guides(colour=guide_legend("Activity"))+
+  scale_colour_manual(name="Lines",values=Actcolors,breaks=c("Productivity","Distraction","RStudio"))+
+  labs(title = "Key Activities by Week",
+  subtitle = "Hours spent per Activity by Week Number\nActivities:Productivity,Distraction,RStudio",
+  caption = "",
+  x = "Week Number",y = "Hours")
+ggsave(last_plot(), filename = "2017TS.pdf", path="Images/Plots",device = "pdf",width = 10, height = 5, units = "in")
+```
+```{r 'Graph 1 - Time by Category'}
+RTCats <- RT %>% group_by(Overview,Category,Productivity) %>% summarize(`Total Time`=sum(`Time Spent (seconds)`)/3600) %>% arrange(desc(`Productivity`)) %>% filter(`Total Time`>1)
+CatSums <- RTCats %>% group_by(Overview,Productivity) %>% summarize(Sum=sum(`Total Time`)) %>% arrange(desc(Overview),desc(Productivity)) %>% mutate(ProSum=Sum*Productivity)
+CatSums$Productivity <- factor(CatSums$Productivity,levels = c(2,1,0,-1,-2))
+CatTotals <- RTCats %>% group_by(Overview) %>% summarize(Total=sum(`Total Time`)) %>% arrange(desc(Total))
+fillcolors <- c("2"="#357AA2","1"="#67A9D1","0"="#FEF0ED","-1"="#FF9777","-2"="#FF7549")
+fix(CatSums)
+ggplot()+
+  geom_bar(data=CatSums,stat="identity",mapping=aes(x=reorder(Overview,ProSum),y=Sum,fill=Productivity))+
+  scale_fill_manual(values = fillcolors)+
+  geom_text(data=CatTotals,aes(Overview,Total,label = paste(round(Total/TotalHrs,2)*100,"%",sep="")),
+    position = position_dodge(.9),
+    vjust = .5,
+    hjust=0)+
+  labs(title = "Total Time per Activity Category",
+  subtitle = "Rescuetime Primary Categories",
+  caption = "",
+  x = "Category",y = "Total Time (HH:MM:SS)")+
+  coord_flip()+
+  theme(axis.text.y = element_text(angle=0,hjust=1))
+ggsave(last_plot(), filename = "CategoryTotals.pdf", path="Images/Plots",device = "pdf",width = 5.0435, height = 3.5, units = "in")
+```
+```{r 'Initialize API',eval=F}
+library(httr)
+RTURL <- parse_url("https://www.rescuetime.com/anapi/data")
+RTep <- oauth_endpoint(authorize=NULL,access="https://www.rescuetime.com/api/oauth/data",base_url="https://www.rescuetime.com/anapi/data")
+RToa <- oauth_app(appname="Rstudio",key="B63uecnA1roYEv4NGkPdH1bDTbPvup4EnIZPk8EK",secret=NULL)
+oauth2.0_authorize_url()
+RTURL$query$key <- "B63uecnA1roYEv4NGkPdH1bDTbPvup4EnIZPk8EK"
+RTURL$query$pv <- "interval"
+RTURL$query$rb <- "2017-01-01"
+RTURL$query$re <- "2017-12-31"
+RTURL$query$rs <- "hour"
+RTURL$query$rk <- "productivity"
+RTURL$query$format <- "csv"
+RTHrs <- GET(build_url(RTURL))
+RTHrs <- read.csv("~/Northeastern/Git/ppua5302/Project 1/Data/RTHourly.csv")
+RTHrs <- RTHrs[,c(1,2,4)]
+colnames(RTHrs) <- c("Date","Time","Productivity")
+RTHrTotal <- RTHrs %>% mutate(Hour=as.numeric(str_extract(Date,"\\d{2}(?=\\:\\d{2}\\:\\d{2})"))) %>% group_by(Hour,Productivity) %>% summarize(Total=sum(Time)/3600)
+RTHrTotal$Productivity <- factor(RTHrTotal$Productivity,levels = c(2,1,0,-1,-2))
+RTHrPD <- RTHrTotal %>% filter(Productivity!="0") %>% mutate(Actual=Total*sign(as.numeric(as.character(Productivity))))
+
+RTHrPD <- plyr::ddply(RTHrPD, .(Hour), transform, percent = Total/sum(Total) * 100)
+RTHrPD <- ddply(RTHrPD, .(Hour), transform, pos = (cumsum(Actual) + 0.5 * abs(Actual)))
+```
+
+```{r 'Density by Hour of Day Graph'}
+#Stack bars with percentages https://stackoverflow.com/questions/22231124/how-to-draw-stacked-bars-in-ggplot2-that-show-percentages-based-on-group
+fillcolors <- c("2"="#357AA2","1"="#67A9D1","0"="#FEF0ED","-1"="#FF9777","-2"="#FF7549")
+sum(RTHrTotal$Total)
+ggplot(data=RTHrPD,mapping=aes(x=Hour))+
+  geom_bar(stat="identity",mapping=aes(y=Actual,fill=Productivity))+
+  scale_fill_manual(values = fillcolors)+
+  geom_text(stat = "identity", aes(label=round(percent,0),y=Actual), position=position_stack(vjust=1))+
+  labs(title = "Total Productivity for Year 2017 by Hour of Day",
+  subtitle = "Percentage of Total by Hour in Labels",
+  caption = "",
+  x = "Hour of Day",y = "Total Time (Hrs)")+
+  scale_x_continuous(breaks = seq(1,23))
+ggsave(last_plot(), filename = "Hourly.pdf", path="Images/Plots",device = "pdf",width = 5.0435, height = 3.5, units = "in")
+
+```
+```{r 'Productivity by Day of Week'}
+RTDay <- RTHrs %>% mutate(Day=wday(ymd(str_extract(Date,"\\d{4}\\-\\d{2}\\-\\d{2}")),label=T)) %>% group_by(Day,Productivity) %>% summarize(Total=sum(Time)/3600) %>% filter(Productivity!=0) %>% ungroup() %>%  mutate(Actual=Total*sign(as.numeric(as.character(Productivity))))
+library(plyr)
+RTDay <- plyr::ddply(RTDay, .(Day), transform, percent = Total/sum(Total) * 100)
+detach("package:plyr", unload=TRUE)
+RTDay$Productivity <- factor(RTDay$Productivity,levels = c(2,1,0,-1,-2))
+```
+```{r 'Productivity by Day of Week'}
+ggplot(data=RTDay,mapping=aes(x=Day))+
+  geom_bar(stat="identity",mapping=aes(y=Actual,fill=Productivity))+
+  scale_fill_manual(values = fillcolors)+
+  geom_text(stat = "identity", aes(label=round(percent,0),y=Actual), position=position_stack(vjust=1))+
+  labs(title = "Total Productivity for Year 2017 by Day of Week",
+  subtitle = "Percentage of Total by Day in Labels",
+  caption = "",
+  x = "Day of Week",y = "Total Time (Hrs)")
+ggsave(last_plot(), filename = "Daily.pdf", path="Images/Plots",device = "pdf",width = 5.0435, height = 3.5, units = "in")
+```
+
+```{r 'Linear Correlation Meditation & Productivity'}
+MedPro <- left_join(ProbyWeek,MedbyWeek, by="Weeknum")
+MedPro[,c(2,3)] <- apply(MedPro[,c(2,3)],2,FUN="scale")
+lmMedPro <- lm(Sum.x~Sum.y,data=MedPro)
+summary(lmMedPro)
+plot(lmMedPro)
+#No Correlation
+```
+```{r 'Initialize Parallel'}
+library(parallel)
+
+cl <- makeCluster(detectCores(),type="PSOCK")
+clusterEvalQ(cl, {
+  library(rvest)
+  library(stringr)
+  library(lubridate)
+})
+clusterExport(cl, "Test")
+clusterEvalQ(cl,{
+library(parallel)
+FBAct <- read_html("~/Northeastern/Git/ppua5302/Project 1/Data/FB Activity Feed/(3) Stephen Synchronicity.html")
+Test <- FBAct %>% html_nodes(xpath="tr._51mx")
+})
+Dates <- system.time(sapply(Test,function(x){x %>% html_nodes(css="td._51m-.vTop._5ep5 > div > div > span") %>% html_text() %>% mdy_hm()}))
+stopCluster(cl)
+```
+```{r 'Scrape Facebook Activity'}
+FBAct <- read_html("~/Northeastern/Git/ppua5302/Project 1/Data/FB Activity Feed/(3) Stephen Synchronicity.html")
+Items <- FBAct %>% html_nodes(xpath="//tr[contains(@class,'_51mx')]")
+Time <- FBAct %>% html_nodes(css="td._51m-.vTop._5ep5 > div > div > span") %>% html_text() %>% mdy_hm()
+Test <- FBAct %>% html_nodes(css="tr._51mx")
+Dates <- lapply(Items,function(x){x%>% html_nodes(css="td._51m-.vTop._5ep5 > div > div > span") %>% html_text() %>% mdy_hm()})
+Action <- lapply(Items,function(x){x %>% html_nodes(css="td._51m-.vTop._5ep5 > div > div > div") %>% html_text()})
+Content <- lapply(Items,function(x){x %>% html_nodes(css="td._51m-.vTop._5ep6") %>% html_text()})
+write_csv(Activity,path="~/Northeastern/Git/ppua5302/Project 1/Data/FB Activity Feed/Activity.csv")
+Activity <- data.frame(Dates=map_call(Dates,"c"),Action={Action %>% unlist()},Content={Content %>% unlist()})
+Activity <- Activity %>% filter(year("2018-01-01")>year(Dates)&year(Dates)>year("2016-01-01"))
+Activity$Weeknum <- sapply(Activity$Dates,FUN="week",simplify = T)
+Activity$SAction <- sapply(Activity$Action,FUN=function(x){str_match(x,"^Stephen\\sSynchronicity\\s(\\w+)") %>% .[,2]})
+ActTotals <- Activity %>% group_by(SAction) %>% summarize(Sum=n()) %>% arrange(desc(Sum)) %>% filter(!is.na(SAction))
+ActTotals$Desc <- ActDesc
+fix(ActTotals)
+```
+```{r 'Graph Activity'}
+ggplot(data=ActTotals,mapping=aes(x=reorder(SAction, order(Sum,decreasing = T)),y=Sum))+
+  geom_bar(stat="identity",fill="#FF7549")+
+  geom_text(aes(label = Sum),
+    position = position_dodge(0.9),
+    vjust = 0)+
+  labs(title = "Facebook Activity",
+  subtitle = "Totals by type of Action",
+  caption = "",
+  x = "Action",y = "Count")
+ggsave(last_plot(), filename = "FBActivityPlot.pdf", path="Images/Plots",device = "pdf",width = 5.0435, height = 3.5, units = "in")
+```
+
+
+
+
+
