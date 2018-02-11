@@ -26,7 +26,7 @@ library("htmltools")
 library("rvest")
 library("stringr")
 library("lubridate")
-theme_blue = function(base_size = 11, base_family = "") {
+theme_blue  <-  function(base_size = 11, base_family = "") {
  
   theme_grey(base_size = base_size, base_family = base_family) %+replace%
  
@@ -63,13 +63,14 @@ title  = element_text(family = "AvantGarde", face = "plain", colour = "white", s
       panel.border = element_rect(fill = NA, color = NA),  
       panel.grid.major  = element_line(colour = "#34415B", size = I(.1), linetype = "solid",lineend = "butt", inherit.blank = FALSE),
 panel.grid.minor  = element_line(colour = "#1C2D52", size = I(.1), linetype = "dotted",lineend = "butt", inherit.blank = FALSE), 
-      panel.spacing = margin(rep(1,4),unit="pt"), 
-      panel.spacing.x  = unit(1,"pt"),
-      panel.spacing.y  = unit(1,"pt"),
+      panel.spacing = margin(rep(.5,4),unit="pt"), 
+      panel.spacing.x  = unit(.5,"pt"),
+      panel.spacing.y  = unit(.5,"pt"),
       # Specify facetting options
       strip.background = element_rect(fill = "#060713", color = "#060713"),  
-      strip.text.x = element_text(size = 1, color = "white"),  
-      strip.text.y = element_text(size = 1, color = "white",angle = -90),  
+      strip.text  = element_text(family = "Helvetica", face = "plain", colour = "white", size = I(base_size*.8),hjust = .5,lineheight = I(base_size*1),margin = margin(rep(1,4), "pt"),inherit.blank = FALSE),
+      strip.text.x = element_text(color = "white"),  
+      strip.text.y = element_text(color = "white",angle = -90),  
       # Specify plot options
       plot.background  = element_rect(fill = "#00010F",colour = "#00010F", linetype = "solid", inherit.blank = FALSE),  
       plot.title = element_text(family=base_family,size = base_size, color = "white", lineheight = I(1.2),vjust=1),
@@ -90,13 +91,46 @@ text(5,2,"AvantGarde",family="AvantGarde")
 options(scipen=12)
 
 ```
+```{r 'Color Schema'}
+#http://colorschemedesigner.com/csd-3.5/
+ColorKey <- c("Base","Darker","Darkest","LightBold","LightLight") 
+MonoDarkBlue <- c("#00021B",	"#060713",	"#00010F",	"#3A42B0",	"#686DB0")
+CompGold <- c("#B48B18",	"#1B1608",	"#161000",	"#B4943B",	"#B4A06A")
+AnalogicViolet <- c("#230159",	"#0B0612",	"#06000F",	"#6839B0",	"#8467B0")
+AnalogicTurquoise <- c("#00395B",	"#050D11",	"#00090E",	"#3983AF",	"#6794AF")
+Actcolors <- c("Meditation"="#6839B0","Productivity"="#357AA2","Distraction"="#FF7549","RStudio"="#75AADB","Yoga"="#DEF83F","Plyometric"="#E03974")
+ColorMatrix <- matrix(data=c(MonoDarkBlue,CompGold,AnalogicViolet,AnalogicTurquoise),nrow=4,ncol=5,byrow=T,dimnames=list(c("MonoDarkBlue","CompGold","AnalogicViolet","AnalogicTurquoise"),ColorKey))
+write_csv(as.data.frame(ColorMatrix),path="ColorMatrix.csv")
+```
 ```{r 'Load Data'}
 Meditation <- read.csv("~/Northeastern/Git/ppua5302/Project 1/Data/insight_sessions_export.csv",header=T,sep=",")
 library(lubridate)
 names(Meditation) <- c("Time","Duration","Activity","Preset")
 Meditation$Time <- mdy_hms(Meditation$Time)
 Meditation$Duration <- as.numeric(as.character(Meditation$Duration))
+(HlthLine <- Meditation %>% filter(year(Time)=="2017") %>% mutate(Weeknum=week(Time)) %>% group_by(Weeknum,Activity) %>% summarise(Sum=sum(Duration)) %>% ungroup %>% mutate(Hrs={Sum / 60}) %>% select(-Sum) %>% spread(key=Activity,value=Hrs) %>% replace_na(list(Meditation=0, Walking=0, Yoga=0, Breathing=0)) %>% mutate(Meditation={Meditation + Breathing}) %>% select(-c(Breathing,Healing)))
 ```
+```{r 'Graph of Health Activities',fig.width=10,fig.height=2}
+ggplot(data = HlthLine,mapping=aes(x=Weeknum))+
+  geom_line(mapping=aes(y=Meditation,colour="Meditation"))+
+  geom_line(mapping=aes(y=Yoga,colour="Yoga"))+
+  geom_line(mapping=aes(y=Walking,colour="Plyometric"))+
+  geom_point(mapping=aes(y=Meditation,colour="Meditation"),shape=24)+
+  geom_point(mapping=aes(y=Yoga,colour="Yoga"),shape=25)+
+  geom_point(mapping=aes(y=Walking,colour="Plyometric"))+
+  scale_x_discrete(limits=seq(0,54,2))+
+scale_y_continuous(minor_breaks = seq(0, 50, 1),breaks=seq(0,50,4))+
+  theme(legend.position = "right",legend.direction="vertical")+
+  guides(colour=guide_legend("Activity"))+
+  scale_colour_manual(name="Lines",values=Actcolors,breaks=c("Meditation","Yoga","Plyometric"))+
+  labs(title = "Health Activities by Week",
+  subtitle = "Hours spent per Activity by Week Number\nActivities:Meditation,Yoga,Plyometric",
+  caption = "",
+  x = "Week Number",y = "Hours")
+ggsave(last_plot(), filename = "Health.pdf", path="Images/Plots",device = "pdf",width = 10, height = 2, units = "in")
+
+```
+
 ```{r 'Filter Data and add to Sheet',eval=F}
 GsheetUpdate <- Meditation %>% filter(Time>mdy("07-13-2017"))
 names(GsheetUpdate) <- c("Started At","Duration (minutes)","Activity","Preset")
@@ -105,27 +139,22 @@ gs_auth()
 MedTrack <- gs_url("https://docs.google.com/spreadsheets/d/19Pz41A0dq0DsJIBuFO0VOw0fXAmzxO7UOa7bHKcIgYQ/edit#gid=1807004634")
 gs_edit_cells(MedTrack,ws=2,input=GsheetUpdate,anchor = "A4095")
 ```
-```{r 'DFs of Activities'}
+```{r 'DFs of Health Activities'}
 Med17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Meditation") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
 Yoga17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Yoga") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
 Plyo17 <- Meditation %>% filter(year(Time)=="2017"&Activity=="Walking") %>% mutate(Weeknum=week(Time)) %>% select(Weeknum,everything())
 ```
+
 ```{r 'Import Rescuetime Data'}
 RT <- read_csv(file="~/Northeastern/Git/ppua5302/Project 1/Data/RescueTime_Report_All_Activities__by_week_2017-01-01.csv",col_names = T)
-View(RT)
 RT$Date <- ymd(RT$Date)
 class(RT$`Productivity`)
+unique(RT$Overview)
+RT$Overview <- factor(RT$Overview,levels=unique(RT$Overview),labels=c("Ref & Learn","Com & Sch","Social Net","Business","Utilities","Design","Entertain","Software Dev","Uncat.","News & Op","Shopping","Misc"))
+(RTSums <- RT %>% group_by(Productivity) %>% summarise(sum={sum(`Time Spent (seconds)`)/3600}) %>% mutate(P=sum/sum(sum)))
+sum(RTSums$P[4:5])
 ```
-```{r 'Color Schema'}
-#http://colorschemedesigner.com/csd-3.5/
-ColorKey <- c("Base","Darker","Darkest","LightBold","LightLight") 
-MonoDarkBlue <- c("#00021B",	"#060713",	"#00010F",	"#3A42B0",	"#686DB0")
-CompGold <- c("#B48B18",	"#1B1608",	"#161000",	"#B4943B",	"#B4A06A")
-AnalogicViolet <- c("#230159",	"#0B0612",	"#06000F",	"#6839B0",	"#8467B0")
-AnalogicTurquoise <- c("#00395B",	"#050D11",	"#00090E",	"#3983AF",	"#6794AF")
-ColorMatrix <- matrix(data=c(MonoDarkBlue,CompGold,AnalogicViolet,AnalogicTurquoise),nrow=4,ncol=5,byrow=T,dimnames=list(c("MonoDarkBlue","CompGold","AnalogicViolet","AnalogicTurquoise"),ColorKey))
-write_csv(as.data.frame(ColorMatrix),path="ColorMatrix.csv")
-```
+
 ```{r 'Totals'}
 RTOV <- RT %>% group_by(Overview,Category) %>% summarize(`Total Time`=sum(`Time Spent (seconds)`)/3600) %>% arrange(desc(`Total Time`)) %>% filter(`Total Time`>1)
 TotalHrs <- sum(RTOV$`Total Time`[!is.na(RTOV$`Total Time`)])
@@ -144,7 +173,7 @@ MedbyWeek <- Med17 %>% group_by(Weeknum) %>% summarize(Sum=round(sum(Duration)/6
 ProbyWeek <- RT %>% filter(Productivity>0) %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
 DisbyWeek <- RT %>% filter(Productivity<0) %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
 RbyWeek <- RT %>% filter(Activity=="rstudio") %>% mutate(Weeknum=week(Date)) %>% group_by(Weeknum) %>% summarize(Sum=round(sum(`Time Spent (seconds)`)/3600,2))
-Actcolors <- c("Meditation"="#6839B0","Productivity"="#357AA2","Distraction"="#FF7549","RStudio"="#75AADB")
+
 #https://stackoverflow.com/questions/7549694/adding-regression-line-equation-and-r2-on-graph
 lm_eqn = function(m) {
 
@@ -210,15 +239,29 @@ ggsave(last_plot(), filename = "CategoryTotals.pdf", path="Images/Plots",device 
 ```{r 'RT Top Activities by Cat'}
 RTCatActs <- RT %>% group_by(Overview,Activity) %>% summarise(sum={sum(`Time Spent (seconds)`)/3600}) %>% ungroup %>% group_by(Overview) %>% top_n(n = 3, wt = sum) %>% ungroup
 RTCatActs <- inner_join(RTCatActs,RT %>% select(Activity,Productivity) %>% distinct,by="Activity")
+RTCatActs$Productivity <- as.factor(RTCatActs$Productivity)
 # RTCatActs <- editData::editData(RTCatActs)
-# fix(RTCatActs)
-ggplot(data = RTCatActs,mapping=aes(y=sum))+
-geom_bar(stat="identity",mapping=aes(x=reorder(Activity,sum),fill=Productivity))+
-facet_wrap(~Overview,scale="free")+
-  theme(legend.key.size = unit(2,"mm"),
-        axis.text.x=element_text(vjust=1,hjust=1),
-        axis.text.y = element_text(vjust=.7,hjust=.9))+
-  coord_flip()
+#fix(RTCatActs)
+actsums <- sum(RTCatActs$sum)
+ggplot(data = RTCatActs,mapping=aes(x=reorder(Activity,sum),y=sum))+
+  geom_bar(stat="identity",mapping=aes(fill=Productivity))+
+  scale_fill_manual(values = fillcolors)+
+  facet_wrap(~Overview,scale="free")+
+  geom_label(mapping=aes(label = paste(round({sum/actsums},2)*100,"%",sep="")),color="#00010F",label.padding = unit(0.15, "lines"),size=rel(2))+
+  #geom_text(mapping=aes(label = paste(round({sum/actsums},2)*100,"%",sep="")),size=rel(1.2),color="white")+
+  theme(axis.text.x=element_text(vjust=1,hjust=.8),
+        axis.text.y = element_text(vjust=.1,hjust=.9))+
+  coord_flip()+
+  labs(title = "Top 3 Activities Per Category",
+  subtitle = "Total time by Activity with % Total Labels",
+  caption = "Note: scale for each facet is set to free",
+  x = "Hrs",y = "Activity") +
+  theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.title.x =element_text(hjust=.3),plot.caption = element_text(hjust=0))
+ggsave(last_plot(), filename = "Top3.pdf", path="Images/Plots",device = "pdf",width = 10, height = 4, units = "in")  
+  
+# ------------------- Sat Feb 10 23:23:28 2018 --------------------#
+#TODO Make Productivity Discrete as.factor and add consistent color schema as other graph.
+
 ```
 
 ```{r 'Initialize API',eval=F}
@@ -269,7 +312,7 @@ RTDay <- plyr::ddply(RTDay, .(Day), transform, percent = Total/sum(Total) * 100)
 detach("package:plyr", unload=TRUE)
 RTDay$Productivity <- factor(RTDay$Productivity,levels = c(2,1,0,-1,-2))
 ```
-```{r 'Productivity by Day of Week'}
+```{r 'Graph of Productivity by Day of Week'}
 ggplot(data=RTDay,mapping=aes(x=Day))+
   geom_bar(stat="identity",mapping=aes(y=Actual,fill=Productivity))+
   scale_fill_manual(values = fillcolors)+
@@ -322,7 +365,8 @@ Activity$Weeknum <- sapply(Activity$Dates,FUN="week",simplify = T)
 Activity$SAction <- sapply(Activity$Action,FUN=function(x){str_match(x,"^Stephen\\sSynchronicity\\s(\\w+)") %>% .[,2]})
 ActTotals <- Activity %>% group_by(SAction) %>% summarize(Sum=n()) %>% arrange(desc(Sum)) %>% filter(!is.na(SAction))
 ActTotals$Desc <- ActDesc
-fix(ActTotals)
+ActTotals <- ActTotals %>% mutate(P=paste(round({Sum/sum(Sum)*100},2),"%",sep=""))
+cat(ActTotals$P)
 ```
 ```{r 'Graph Activity'}
 ggplot(data=ActTotals,mapping=aes(x=reorder(SAction, order(Sum,decreasing = T)),y=Sum))+
