@@ -26,7 +26,6 @@ library("htmltools")
 library("rvest")
 library("stringr")
 library("lubridate")
-library(plyr)
 theme_blue = function(base_size = 11, base_family = "") {
  
   theme_grey(base_size = base_size, base_family = base_family) %+replace%
@@ -64,16 +63,19 @@ title  = element_text(family = "AvantGarde", face = "plain", colour = "white", s
       panel.border = element_rect(fill = NA, color = NA),  
       panel.grid.major  = element_line(colour = "#34415B", size = I(.1), linetype = "solid",lineend = "butt", inherit.blank = FALSE),
 panel.grid.minor  = element_line(colour = "#1C2D52", size = I(.1), linetype = "dotted",lineend = "butt", inherit.blank = FALSE), 
-      panel.spacing = margin(rep(0,4),unit="pt"),   
+      panel.spacing = margin(rep(1,4),unit="pt"), 
+      panel.spacing.x  = unit(1,"pt"),
+      panel.spacing.y  = unit(1,"pt"),
       # Specify facetting options
       strip.background = element_rect(fill = "#060713", color = "#060713"),  
-      strip.text.x = element_text(size = base_size*0.8, color = "white"),  
-      strip.text.y = element_text(size = base_size*0.8, color = "white",angle = -90),  
+      strip.text.x = element_text(size = 1, color = "white"),  
+      strip.text.y = element_text(size = 1, color = "white",angle = -90),  
       # Specify plot options
       plot.background  = element_rect(fill = "#00010F",colour = "#00010F", linetype = "solid", inherit.blank = FALSE),  
       plot.title = element_text(family=base_family,size = base_size, color = "white", lineheight = I(1.2),vjust=1),
       plot.subtitle  = element_text( size = I(base_size*.8),hjust = I(.5),vjust=1, lineheight = I(1.2), inherit.blank = FALSE),
-      plot.margin = margin(.2,.2,.2,.2,unit="cm")
+      plot.margin = margin(.2,.2,.2,.2,unit="cm"),
+strip.switch.pad.grid  = unit(0, "cm")
  
     )
  
@@ -204,6 +206,21 @@ ggplot()+
   theme(axis.text.y = element_text(angle=0,hjust=1))
 ggsave(last_plot(), filename = "CategoryTotals.pdf", path="Images/Plots",device = "pdf",width = 5.0435, height = 3.5, units = "in")
 ```
+
+```{r 'RT Top Activities by Cat'}
+RTCatActs <- RT %>% group_by(Overview,Activity) %>% summarise(sum={sum(`Time Spent (seconds)`)/3600}) %>% ungroup %>% group_by(Overview) %>% top_n(n = 3, wt = sum) %>% ungroup
+RTCatActs <- inner_join(RTCatActs,RT %>% select(Activity,Productivity) %>% distinct,by="Activity")
+# RTCatActs <- editData::editData(RTCatActs)
+# fix(RTCatActs)
+ggplot(data = RTCatActs,mapping=aes(y=sum))+
+geom_bar(stat="identity",mapping=aes(x=reorder(Activity,sum),fill=Productivity))+
+facet_wrap(~Overview,scale="free")+
+  theme(legend.key.size = unit(2,"mm"),
+        axis.text.x=element_text(vjust=1,hjust=1),
+        axis.text.y = element_text(vjust=.7,hjust=.9))+
+  coord_flip()
+```
+
 ```{r 'Initialize API',eval=F}
 library(httr)
 RTURL <- parse_url("https://www.rescuetime.com/anapi/data")
