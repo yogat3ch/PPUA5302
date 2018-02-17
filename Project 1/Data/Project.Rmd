@@ -1,0 +1,98 @@
+---
+title: "Scraper"
+author: "Stephen Synchronicity"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+always_allow_html: yes
+header-includes:
+   - \usepackage{dcolumn}
+output: 
+  html_document: 
+    css: bootstrap.min.css
+    highlight: zenburn
+    keep_md: yes
+    theme: spacelab
+    toc_float: true
+    toc: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE, fig.align='center', fig.height=3.5, fig.width=5, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+rmarkdown::html_dependency_jquery()
+rmarkdown::html_dependency_bootstrap("spacelab")
+rmarkdown::html_dependency_jqueryui()
+set.seed(1)
+library("tidyverse")
+library("dplyr")
+library("htmltools")
+library("rvest")
+library("RSelenium")
+library("stringr")
+library("xml2")
+library("httr")
+library("scrapeR")
+rSelNav <- function(url){
+  if(class(url)=="url"){url <- build_url(url)}
+
+# -------------------navigate to URL Sat Dec 30 08:37:40 2017 --------------------#
+#if error, restart selenium, and try again, up to 3 times
+  out <- NULL
+  attempt <- 1
+  while( is.null(out) && attempt <= 3 ) {
+  attempt <- attempt + 1
+  try(
+     out <- tryCatch({remDr$navigate(url)
+       print(remDr$getTitle() %>% unlist())
+  }, 
+  warning = function(w) {print(paste("The url:",url," returned the following warning: ",w,sep=""))},
+  error = function(e) {print(paste("The url:",url," returned the following error: ",e,sep=""))
+    remDr$closeall()
+    remDr <<- remoteDriver(remoteServerAddr = "192.168.99.100",port = 4445L,browserName = "chrome")
+    remDr$open(silent=T)
+  out <- NULL},
+  finally = {return(out)})
+  )
+  }   
+return(out)
+}
+```
+
+
+
+<button data-toggle="collapse" data-target="#demo" class="btn">Homework Outline</button>
+<div id="demo" class="collapse">
+
+</div>
+```{r 'R Selenium Chrome Loading'}
+# For Help: vignette("RSelenium-docker", package = "RSelenium")
+#docker run -d -p 4445:4444 -p 5901:5900 selenium/standalone-chrome-debug
+remDr <- remoteDriver(remoteServerAddr = "192.168.99.100",port = 4445L,browserName = "chrome")
+remDr$open(silent=T)
+#stop all: docker stop $(docker ps -q)
+```
+```{r 'R Selenium Phantom JS',eval=F}
+#docker run -d -p 8910:8910 wernight/phantomjs phantomjs --webdriver=8910
+remDr <- remoteDriver(remoteServerAddr = "192.168.99.100",port = 8910L,browserName = "phantomjs")
+remDr$open(silent=T)
+```
+```{r 'Login'}
+rSelNav("https://facebook.com/login")
+#send username
+username <- remDr$findElement(using = "xpath", value = "//input[@id='email']")
+username$sendKeysToElement(list("sholsen@alumni.emory.edu"))
+#send password and Enter
+passwd <- remDr$findElement(using = "xpath", value = "//input[@id='pass']")
+passwd$sendKeysToElement(list("236SBl8YOuet", "\uE007"))
+```
+```{r 'Navigate'}
+rSelNav("https://www.facebook.com/stephen.synchronicity/allactivity?privacy_source=activity_log_top_menu")
+```
+```{r 'Unroll Activity'}
+i <- 1
+while (i<1000) {
+  i+1
+   remDr$sendKeysToActiveElement(list(key="end"))
+  Sys.sleep(abs(rnorm(1,2,.2)))
+}
+htmActivity <- read_html(remDr$getPageSource()[[1]])
+```
+
+
