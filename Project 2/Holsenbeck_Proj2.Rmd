@@ -26,6 +26,64 @@ req.packages <- c("tidyverse","dplyr","htmltools","magrittr","ggmap","cluster","
 for (q in seq_along(req.packages)) {
   suppressPackageStartupMessages(library(req.packages[q],character.only = T))
 }
+theme_p2  <-  function(base_size = 11, base_family = "") {
+ 
+  theme_classic(base_size = base_size, base_family = base_family) %+replace%
+ 
+    theme(line  = element_line(colour = "black", size = I(1.5), linetype = "solid",
+  lineend = "round", arrow = NULL, inherit.blank = FALSE),
+rect  = element_rect(fill = "#00010F", colour = "#00010F", size = 0, linetype = "solid", inherit.blank = FALSE),
+text  = element_text(family = "Helvetica", face = "plain", colour = "black", size = base_size,hjust = I(.5), vjust = I(.5), angle = 0, lineheight = base_size,color = NULL,margin = margin(I(1),I(1),I(1),I(1),unit="pt"),debug=F, inherit.blank = FALSE),
+title  = element_text(family = "AvantGarde", face = "plain", colour = "black", size = I(base_size),hjust = I(.5), vjust = I(1), angle = 0, lineheight = I(base_size),color = NULL,margin = margin(I(1),I(1),I(1),I(1),unit="pt"), inherit.blank = FALSE),
+      # Specify axis options
+      axis.line  = element_blank(),  
+      axis.text.x = element_blank(),  
+      axis.text.y = element_blank(),  
+      axis.ticks = element_blank(),
+      axis.title  = element_blank(),
+      axis.title.x = element_blank(),  
+      axis.title.y = element_blank(),  
+      axis.ticks.length = unit(0.0, "lines"),   
+      # Specify legend options
+      legend.background = element_blank(),  
+      legend.key = element_rect(color = "black",  fill = "white"),  
+      legend.key.size = unit(1.2, "lines"),  
+      legend.key.height = NULL,  
+      legend.key.width = NULL,      
+      legend.text = element_text(size = base_size*0.8, color = "black"),  
+      legend.title = element_text(size = base_size*0.8, face = "bold", hjust = 0, color = "black"),  
+      legend.position = "right",  
+      legend.text.align = NULL,  
+      legend.title.align = NULL,  
+      legend.direction = "vertical",  
+      legend.box = NULL, 
+      # Specify panel options
+      panel.background  = element_blank(),  
+      panel.border = element_blank(),  
+      panel.grid.major  = element_line(colour = "#34415B", size = I(.1), linetype = "solid",lineend = "butt", inherit.blank = FALSE),
+panel.grid.minor  = element_line(colour = "#1C2D52", size = I(.1), linetype = "dotted",lineend = "butt", inherit.blank = FALSE), 
+      panel.spacing = margin(rep(.2,4),unit="pt"), 
+      panel.spacing.x  = unit(.5,"pt"),
+      panel.spacing.y  = unit(.5,"pt"),
+      # Specify facetting options
+      strip.background = element_rect(fill = "#060713", color = "#060713"),  
+      strip.text  = element_text(family = "Helvetica", face = "plain", colour = "white", size = I(base_size*.8),hjust = .5,lineheight = I(base_size*1),margin = margin(rep(1,4), "pt"),inherit.blank = FALSE),
+      strip.text.x = element_text(color = "black"),  
+      strip.text.y = element_text(color = "black",angle = -90),  
+      # Specify plot options
+      plot.background  = element_blank(),  
+      plot.title = element_text(family=base_family,size = base_size, color = "black", lineheight = I(2),vjust=1,margin=margin(rep(.5,4),"cm")),
+      plot.subtitle  = element_text( size = I(base_size*.8),hjust = I(.5),vjust=1, lineheight = I(2), margin=margin(rep(.5,4),"cm"),inherit.blank = FALSE),
+      plot.margin = margin(rep(.2,4),unit="cm"),
+strip.switch.pad.grid  = unit(0, "cm")
+ 
+    )
+}
+prime.colors <- RColorBrewer::brewer.pal(3,"Set1")
+theme_set(theme_p2(base_family = "AvantGarde",base_size = 14))
+update_geom_defaults("text",list(colour="black",size=rel(2.5)))
+windowsFonts(AvantGarde=windowsFont("TT AvantGarde-Book"))
+windowsFonts(Helvetica=windowsFont("TT Helvetica"))
 ```
 # Data Reading & Wrangling
 
@@ -38,6 +96,9 @@ Voters <- Voters[-1,]
 Voters$Zip <- Voters$Zip %>% gsub("^","0",.)
 Voters <- Voters %>% tidyr::extract(Zip, into = c("Zip","ZipSuf"), "(\\d{5})(\\d{4})?", remove=FALSE)
 Addresses <- unique(str_c(Voters$`St Addr`,Voters$`Residential Address - Street Name`,",","Waltham, MA",Voters$Zip,"USA",sep=" "))
+load("geo_replies.Rdata")
+answer <- read.csv(file="answer.csv")
+load("../.RData")
 ```
 
 
@@ -45,18 +106,18 @@ Addresses <- unique(str_c(Voters$`St Addr`,Voters$`Residential Address - Street 
 ## Geocoding Addresses
 ```{r 'Geocoding',eval=F}
 # ----------------------- Thu Mar 08 22:49:26 2018 ------------------------#
-# 2500 at a time
+# 2500 at a time based on free restrictions.
 geo_replies <- vector("list",4820)
-ctr <- rep(NA,4820)
+ctr <- vector()
 for (i in retry) {
   ctr[i] <- i
   print(ctr[i])
-  geo_replies[[i]]  <-  geocode(Addresses[i], output='all', messaging=TRUE, override_limit=TRUE,source = "dsk")
+  geo_replies[[i]]  <-  ggmap::geocode(Addresses[i], output='all', messaging=TRUE, override_limit=TRUE,source = "dsk")
   
   print(geo_replies[[i]]$status)
   while(geo_replies[[i]]$status != "OK"){
     Sys.sleep(60)
-    geo_replies[[i]]  <-  geocode(Addresses[i], output='all', messaging=TRUE, override_limit=TRUE,source = "dsk")
+    geo_replies[[i]]  <-  ggmap::geocode(Addresses[i], output='all', messaging=TRUE, override_limit=TRUE,source = "dsk")
   }
 }
 answer <- data.frame(
@@ -76,10 +137,10 @@ answer <- data.frame(
 ct <- vector()
 for (l in retry) {
   ct[l] <- l
-  types <- geo_replies[[l]] %>% pluck(list("results",1,"address_components")) %>% lapply("[[","types") %>% lapply("[",1) %>% unlist %>% str_which("postal_code") 
+  types <- geo_replies[[l]] %>% purrr::pluck(list("results",1,"address_components")) %>% lapply("[[","types") %>% lapply("[",1) %>% unlist %>% stringr::str_which("postal_code") 
   if(length(types)==1){next}
   for (c in seq_along(types)) {
-    answer[l,types[c]] <- geo_replies[[l]] %>% pluck(list("results",1,"address_components",c,"short_name"))
+    answer[l,types[c]] <- geo_replies[[l]] %>% purrr::pluck(list("results",1,"address_components",c,"short_name"))
   }
   answer[l,"lat"] <- geo_replies[[l]][["results"]][[1]][["geometry"]][["location"]][["lat"]]
   answer[l,"lon"] <- geo_replies[[l]][["results"]][[1]][["geometry"]][["location"]][["lng"]]
@@ -89,7 +150,7 @@ for (l in retry) {
 # ----------------------- Fri Mar 09 11:08:25 2018 ------------------------#
 # Determine items with missing data
 
-type.v <- lapply(geo_replies[2522:4820],FUN=function(x){x %>% pluck(list("results",1,"address_components")) %>% lapply("[[","types") %>% lapply("[",1) %>% unlist %>% length}  )
+type.v <- lapply(geo_replies[2522:4820],FUN=function(x){x %>% purrr::pluck(list("results",1,"address_components")) %>% lapply("[[","types") %>% lapply("[",1) %>% unlist %>% length}  )
 which(type.v==1)
 retry <- 2521+which(type.v==1)
 sapply(types[2522:4820],length)
@@ -99,7 +160,7 @@ retry <- which(answer$locality!="Waltham")
 oql <- which(lapply(geo_replies,"[[","status")!="OK")
 lengths <- vector()
 for (l in seq_along(geo_replies)) {
-  lengths[l] <- geo_replies[[l]] %>% pluck(list("results",1,"address_components")) %>% length
+  lengths[l] <- geo_replies[[l]] %>% purrr::pluck(list("results",1,"address_components")) %>% length
 }
 which.max(lengths)
 write.csv(answer,"answer.csv")
@@ -107,9 +168,9 @@ save(geo_replies,file="geo_replies.Rdata")
 ```
 
 ### Joining with Original Data
-```{r 'Join Geocoded Data'}
-load("geo_replies.Rdata")
-answer <- read.csv(file="answer.csv")
+```{r 'Join Geocoded Data',eval=F}
+
+
 answer$postal_code %<>% gsub("^","0",.)
 # ----------------------- Sun Mar 11 18:04:20 2018 ------------------------#
 # Remove duplicates from answer
@@ -131,7 +192,7 @@ Voters$`Residential Address - Street Name` %<>% sapply(.,simpleCap)
 iVoters <- nrow(Voters)
 formatted_address <- vector()
 for (i in 1:iVoters) {
-  formatted_address[i] <- str_c(Voters[i,'St Addr']," ",simpleCap(Voters[i,'Residential Address - Street Name']),","," Waltham, MA ",Voters[i,'Zip']," US",collapse="")
+  formatted_address[i] <- stringr::str_c(Voters[i,'St Addr']," ",simpleCap(Voters[i,'Residential Address - Street Name']),","," Waltham, MA ",Voters[i,'Zip']," US",collapse="")
 }
 Voters$formatted_address <- formatted_address
 ianswer <- nrow(answer)
@@ -206,31 +267,31 @@ for (c in seq_along(critNames)) {
 best <- names(bestIndex.crit) %>% as.numeric
 pars[best,]
 bestCl <- clusters %>% subset(seq_along(clusters)%in%best)
-(dropPoints <- lapply(bestCl, "[[","centers") %>% unique)
+dPts <- lapply(bestCl, "[[","centers") %>% unique)
 # ----------------------- Fri Mar 09 17:53:32 2018 ------------------------#
 # Visualize the D>rop points
 # ----------------------- Sun Mar 11 19:36:43 2018 ------------------------#
 # Add Voronoi diagram
 
 
-dropPoints <- lapply(dropPoints, as.data.frame)
-for (d in seq_along(dropPoints)) {
+dPts <- lapply(dPts, as.data.frame)
+for (d in seq_along(dPts)) {
   D <- as.data.frame(D)
-  if(length(dropPoints[[d]]$lon)>1){
+  if(length(dPts[[d]]$lon)>1){
     
     corners <-  c(range(D$lon),range(D$lat))
-    voronoi <- deldir::deldir(dropPoints[[d]]$lon, dropPoints[[d]]$lat,rw=corners)
+    voronoi <- deldir::deldir(dPts[[d]]$lon, dPts[[d]]$lat,rw=corners)
   print(ggmap(Waltham) +
   geom_point(data=D, mapping=aes(x=lon, y=lat),color="blue",size=.2,na.rm=F)+
-  geom_point(data=dropPoints[[d]], mapping=aes(x=lon, y=lat),color="black")+
+  geom_point(data=dPts[[d]], mapping=aes(x=lon, y=lat),color="black")+
     geom_segment(
     aes(x = x1, y = y1, xend = x2, yend = y2),
-    size = 1,
+    size = .5,
     data = voronoi$dirsgs,
     linetype = 1,
     color= "black"))}else {print(ggmap(Waltham) +
   geom_point(data=as.data.frame(D), mapping=aes(x=lon, y=lat),color="blue",size=.2,na.rm=F)+
-  geom_point(data=dropPoints[[d]], mapping=aes(x=lon, y=lat),color="black"))}
+  geom_point(data=dPts[[d]], mapping=aes(x=lon, y=lat),color="black"))}
 }
 ```
 <p> For a campaign, the number of volunteers available for canvassing can help determine the model to use for drop point selection, where the number of volunteers is closest to the number of centroids. Alternatively, the number of volunteers can be used to select the model based on the number of centroids.</p>
@@ -310,83 +371,37 @@ drops <- dropPoints(data=data,f="Party Affiliation")
 ```
 
 ### Visualizing Centers
-
-```{r 'visDrops Function for Visualizing Centers'}
-# ----------------------- Fri Mar 09 17:53:32 2018 ------------------------#
-# Visualize the Drop points
-
-visDrops <- function(data=data,f=f,drops=drops) {
-  c <- RColorBrewer::brewer.pal(length(drops),"Set1")
-  for (d in seq_along(drops)) {
-  df.f <- data %>% subset(.[[f]]==names(drops)[d]) %>% select(c("lat","lon"))
-  Waltham <- get_googlemap(center=c(mean(df.f$lon),mean(df.f$lat)), zoom=13, format="png8",maptype = "roadmap")
-  co <- c[d]
-    for (i in seq_along(drops[[d]][['DropCoords']])) {
-# ----------------------- Mon Mar 12 13:13:54 2018 ------------------------#
-      # Add gridarrangement to output
-      ld <- length(drops[[d]][['DropCoords']])
-      grob.list <- vector("list",ld)
-      gcol <- c(2,3,4)
-      gcol <- gcol[max(which(ld %% gcol ==0|ld %% gcol ==1))]
-      
-      ld / gcol
-      t <- paste("Factor=",names(drops)[d],", k=",drops[[d]][["BestConfigs"]][["k"]][i],sep="")
-      centers <- drops[[d]][['DropCoords']][[i]]
-      if(length(centers$lon)>1){
-    corners <-  c(range(df.f$lon),range(df.f$lat))
-    voronoi <- deldir::deldir(centers$lon, centers$lat,rw=corners)
-    print(ggmap(Waltham) +
-    geom_point(data=df.f, mapping=aes(x=lon, y=lat),color=co,size=.6,na.rm=F)+
-    geom_point(data=centers, mapping=aes(x=lon, y=lat),color="black")+
-      geom_segment(
-    aes(x = x1, y = y1, xend = x2, yend = y2),
-    size = 1,
-    data = voronoi$dirsgs,
-    linetype = 1,
-    color= "black")+
-      labs(title = t,
-      subtitle = "",
-      caption = "",
-      x = "",y = "") +
-      theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank()))
-    ggplot2::ggsave(filename=paste(t,".pdf",sep=""),plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
-      }else {
-      print(ggmap(Waltham) +
-    geom_point(data=df.f, mapping=aes(x=lon, y=lat),color=co,size=.6,na.rm=F)+
-    geom_point(data=centers, mapping=aes(x=lon, y=lat),color="black")+
-      labs(title = t,
-      subtitle = "",
-      caption = "",
-      x = "",y = "") +
-      theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank(),axis.ticks = element_blank()
-      ))
-        ggplot2::ggsave(filename=paste(t,".pdf",sep=""),plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
-    }
-      
-    }
-  } 
-}
-visDrops(data=data,f=f,drops=drops)
-```
-<p class="a">A kmeans object from the dropPoints output is to be selected manually based on the number of volunteers available. This cluster data is then used to group the original data.</p>
-
-```{r 'Group by Clusters'}
+<strong>Vectorized add Group Col to Data</strong>
+```{r 'Vectorized add Group Col to Data'}
 # ----------------------- Sat Mar 17 16:36:52 2018 ------------------------#
 # Cluster the data, graph to ensure arruracy
-
-
-D.grpd <- data %>% filter(`Party Affiliation` =="D") %>% cbind(Group=drops[["D"]][["Clusters"]][[6]]$cluster)
-D.grpd$Group %<>% factor 
-ggmap(Waltham)+
-  geom_point(data=D.grpd,mapping=aes(x=lon,y=lat,color=Group),size=1)
-
+var.num <- names(data)[sapply(data,is.numeric)]
+lalof <- c(stringr::str_extract(var.num,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.num,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],f)
+nms <- unique(data[[f]])
+data.clusters <- sapply(nms,FUN=function(nm,drops,data,lalof){
+  print(nm)
+  
+  d.grpd <- data[data[[f]] %in% nm,lalof]
+  d.grpd.cls <- lapply(drops[[nm]][["Clusters"]],function(cl,d.grpd){
+    grp <- cl[['cluster']]
+    d.grpd <- cbind(d.grpd,Group=grp)
+    d.grpd[['Group']] %<>% as.factor 
+    return(d.grpd)
+  },d.grpd=d.grpd)
+  return(d.grpd.cls)
+},drops=drops,data=data,lalof=lalof)
 ```
 <strong>startPoints</strong>
 <p class="a">
 A function that finds startings points at the center of density for the area to ensure the time available canvassing captures the greatest number of voters.<p>
+ <em>Inputs:</em>  
+ data - original data, grp - variable name for the cluster group value
+ <em>Outputs:</em> A df with three columns, lat/lon & Group id
 ```{r 'Locate the starting point'}
 # ----------------------- Sat Mar 17 16:28:04 2018 ------------------------#
 # Inputs: data - original data, grp - variable name for the cluster group value
+# Outputs: A df with three columns, lat/lon & Group id
+# Vectorization of the function suited for the output from dropPoints is below
 # Depends: stringr
 startPoints <- function(data,grp) {
  var.num <- names(data)[sapply(data,is.numeric)]
@@ -412,11 +427,87 @@ d.grp[which.max(d.grp.nn),] # Returns the index of the point with the most neare
  sPs <- as.data.frame(matrix(data=sPs %>% unlist,ncol=3,byrow=T,dimnames = list(rows=NULL,cols=lalogrp)))
  return(sPs)
 }
+#sPs <- startPoints(D.grpd,"Group") #For Testing
+# ----------------------- 3/19/2018 3:51:58 PM ------------------------#
+# Vectorization of startPoints function 
+sPs <- sapply(data.clusters,function(item){
+  sPs <- lapply(item,function(cl){
+    sPs <- startPoints(cl,"Group")
+  })
+})
 
-sPs <- startPoints(D.grpd,"Group")
 
 meters <- c(lat=111080.83603511854,lon=111577.12826935215) # Meters per unit latitude,longitude
 ```
+
+
+```{r 'visDrops Function for Visualizing Centers'}
+# ----------------------- Fri Mar 09 17:53:32 2018 ------------------------#
+# Visualize the Drop points
+# TODO(Add support for hierarchical clustering and bounding boxes around clusters.) 3/19/2018 2:10:01 PM EDT
+visDrops <- function(data=data,f=f,drops=drops,sPs=NULL) {
+  
+  c <- RColorBrewer::brewer.pal(length(drops),"Set1")
+  for (d in seq_along(drops)) {
+  df.f <- data %>% subset(.[[f]]==names(drops)[d]) %>% select(c("lat","lon"))
+  if(exists(Waltham,envir = parent.env(environment(fun=visDrops)))==F){Waltham <- get_googlemap(center=c(mean(df.f$lon),mean(df.f$lat)), zoom=13, format="png8",maptype = "roadmap")}
+  
+  co <- c[d]
+    for (i in seq_along(drops[[d]][['DropCoords']])) {
+# ----------------------- Mon Mar 12 13:13:54 2018 ------------------------#
+      # Add gridarrangement to output
+      ld <- length(drops[[d]][['DropCoords']])
+      grob.list <- vector("list",ld)
+      gcol <- c(2,3,4)
+      gcol <- gcol[max(which(ld %% gcol ==0|ld %% gcol ==1))]
+      
+      ld / gcol
+      t <- paste("Factor=",names(drops)[d],", k=",drops[[d]][["BestConfigs"]][["k"]][i],sep="")
+      
+      if(is.null(sPs)){centers <- drops[[d]][['DropCoords']][[i]]}else {
+        centers <- sPs[[d]][[i]]
+        sapply(centers,cat)
+      }
+      
+      if(length(centers$lon)>1){
+    corners <-  c(range(df.f$lon),range(df.f$lat))
+    voronoi <- deldir::deldir(centers$lon, centers$lat,rw=corners)
+    print(ggmap(Waltham) +
+    geom_point(data=df.f, mapping=aes(x=lon, y=lat),color=co,size=.6,na.rm=F)+
+    geom_point(data=centers, mapping=aes(x=lon, y=lat),color="black")+
+      geom_segment(
+    aes(x = x1, y = y1, xend = x2, yend = y2),
+    size = .4,
+    data = voronoi$dirsgs,
+    linetype = 1,
+    color= "black")+
+      labs(title = t,
+      subtitle = "",
+      caption = "",
+      x = "",y = "") +
+      theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank()))
+    #ggplot2::ggsave(filename=paste(t,".pdf",sep=""),plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
+      }else {
+      print(ggmap(Waltham) +
+    geom_point(data=df.f, mapping=aes(x=lon, y=lat),color=co,size=.6,na.rm=F)+
+    geom_point(data=centers, mapping=aes(x=lon, y=lat),color="black")+
+      labs(title = t,
+      subtitle = "",
+      caption = "",
+      x = "",y = "") +
+      theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank(),axis.ticks = element_blank()
+      ))
+        #ggplot2::ggsave(filename=paste(t,".pdf",sep=""),plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
+    }
+      
+    }
+  } 
+}
+visDrops(data=data,f=f,drops=drops, sPs=sPs)
+```
+<p class="a">A kmeans object from the dropPoints output is to be selected manually based on the number of volunteers available. This cluster data is then used to group the original data.</p>
+
+
 
 <strong>Route Optimization - Function: routes() </strong>
 <p>The function expects data with a column entitled "Group" (or specify with grp argument) that contains the cluster number the observation belongs to. The data is filtered by group. The function then uses an iterative k-nearest neighbors from the spdep package to provide an index of "as the crow flies" nearest neighbors for each point observation in the cluster. The starting points sPs object is used to select the point with the highest number of nearest neighbors within one standard deviation to start the route data frame (route). The nearest neighbors indexes for this point (d.nn columns: nnX) are used to subset the cluster to just the k-nearest neighbors as potential destinations (nn). K defaults to 5 and increments up if all k nearest neighbors are already in the route, the overall nearest neighbors index object (d.nn) is then subsetted to include only points not already in the route before recalculating nearest neighbors indexes. The nearest neighbors (nn) are used to minimize the number of requests made on the gmapsdistance API, as a standard plan API key has <a href="https://developers.google.com/maps/documentation/javascript/usage">rate limits</a>. The return from gmapdistance is used to select the point with the least walking time as the next destination that is added to the route. The next iteration of loop starts with this point. The outcome (provided no errors are encountered), is a list of data frames, one for each cluster, with a list of the unique points in the cluster sorted into a shortest path walking route indicated by the Index column. The first point will be the optimal point to start so as to maximize the number of canvassed houses in the least amount of time. The data frames can be joined with the original data to include the full data for each observation sorted by factor. The data is then filtered by group to form new dataframes for each of the groups. Each group dataframed is sorted by index for optimal route, and then provided to the canvasser.   
@@ -453,13 +544,14 @@ get.api.key()
 # Input: sPs - the starting points data frame, data - the original data filtered by factor to which the cluster groupings correspond, with a column added with the group labels. grp - the name of this column
 # Output: A list of dataframes for each group with a Route column that has the index numbers used to sort the order from point to point of the walking route. 
 # Depnends: spdep, gmapsdistance, tidyverse
+#TODO(Add support for vectorized reading of sPs output.) 3/19/2018 2:11:47 PM
 routes <- function(sPs, data, grp="Group", key=NULL, verbose=F){
   if(is.null(key)){key <- gmapsdistance::get.api.key()}
   sPs <- sPs[order(sPs$Group),]#
 # ----------------------- Sun Mar 18 20:18:13 2018 ------------------------#
-# TODO(Add a repeating d.knn loop that filters re-sorts each time)
+# TODO(Add a repeating d.knn loop that filters & re-sorts based on a criteria)
 
-# ----------------------- Sat Mar 17 19:55:56 2018 ------------------------#
+#----------------- Sat Mar 17 19:55:56 2018 ------------------------#
 # Needs to loop and create an ordered vector of observation indices indicating a sequence to follow. 
 out <- apply(sPs,1,function(sP,data,grp,key){
   lalogrp <- names(sP) # Grab the col names
@@ -467,6 +559,7 @@ out <- apply(sPs,1,function(sP,data,grp,key){
   k <- 5
   nn.nms <- c(paste0("nn",1:k))
   d.knn <- spdep::knearneigh(as.matrix(d.grp[,1:2]),k=k,longlat=T) %>% spdep::knn2nb(sym=F) %>% unlist %>% matrix(ncol=k,byrow=T,dimnames=list(rows=names(.),cols=nn.nms)) %>% unclass %>% cbind(d.grp,.)
+  d.knn.m <- mean(dist(d.knn[,1:2]))
   # Find the 5 nearest neighbors by lat,lon distance for each observation
   # Translate the results into a matrix
   # Combine it with the original data
@@ -492,28 +585,29 @@ if(all((route[r,1] %in% d.knn[,1] & route[r,2] %in% d.knn[,2]))==F | length((d.k
    nn.nms <- c(paste0("nn",1:k))
   d.rem <- d.grp[!d.grp[,1] %in% route[-r,1] & !d.grp[,2] %in% route[-r,2],1:2] # Remaining obs
   d.knn <- d.rem %>% as.matrix %>% spdep::knearneigh(.,k=k,longlat=T) %>% spdep::knn2nb(sym=F) %>% unlist %>% matrix(ncol=k,byrow=T,dimnames=list(rows=names(.),cols=nn.nms)) %>% unclass %>% cbind(d.rem[,1:2],.)
+  d.knn.m <- mean(dist(d.knn[,1:2]))
 }
 # ----------------------- Sun Mar 18 15:59:56 2018 ------------------------#
 # Subset nn based on the last observed value in route
 d.knn.lastobs <- d.knn[d.knn[,1]==route[r,1] & d.knn[,2]==route[r,2],] # The row of the nearest neighbors that is equivalent to the last obs
    nn <- d.knn.lastobs[,nn.nms,drop=T] %>% unlist %>% d.knn[.,] # The Indexes of nn are used to subset nn
   nn <- nn %>% subset(subset=((nn[,1] %in% route[,1] & nn[,2] %in% route[,2])==F)) %>% .[!is.na(.[,1]),]
-  print.AsIs(nn)
+  if(verbose==T){print.AsIs(nn)}
   
   if(nrow(nn)==1 & nn[1,1] > 2){route[(r+1),] <- c(nn[,1:2],sP["Group"],Index=r+1)
        next}
   
-  if(nrow(nn) < 1){
+  if(nrow(nn) < 1 | mean(dist(nn[,1:2])) > d.knn.m){
+    if(verbose==T){print("mean dist of nn is greater than overall dist, recalculating d.knn")}
 # ----------------------- Sun Mar 18 01:00:42 2018 ------------------------#
-# TODO(Debug the recalculation of nearest neighbors)
-  d.knn <- d.knn[(d.knn[[lalogrp[1]]] %in% route[-r,1,drop=T] & d.knn[[lalogrp[2]]] %in% route[-r,2,drop=T])==F,]
+# Recalculate nearest neighbors based on the above criteria
          
-  if(nrow(d.knn)>k & k<16){k <- k+1}else if(nrow(d.knn)<=k){k <- (nrow(d.knn)-1)}#Evaluate k based on rows left in nearest neighbors df
+  if(nrow(d.knn)<=k){k <- (nrow(d.knn)-1)}#Evaluate k based on rows left in nearest neighbors df
   
   nn.nms <- c(paste0("nn",1:k))
   d.rem <- d.grp[!d.grp[,1] %in% route[-r,1] & !d.grp[,2] %in% route[-r,2],1:2] # Remaining obs
   d.knn <- d.rem %>% as.matrix %>% spdep::knearneigh(.,k=k,longlat=T) %>% spdep::knn2nb(sym=F) %>% unlist %>% matrix(ncol=k,byrow=T,dimnames=list(rows=names(.),cols=nn.nms)) %>% unclass %>% cbind(d.rem[,1:2],.)
-  
+  d.knn.m <- mean(dist(d.knn[,1:2]))
          next}
    o <- paste(route[r,1,drop=T],route[r,2,drop=T],sep="+")
    d <- apply(nn,1,function(x){
@@ -541,23 +635,31 @@ Routes <- routes(sPs=sPs, data=data, key=key) #UNtested
 
 ```{r 'Visualizing Route'}
 # ----------------------- Sun Mar 18 08:45:56 2018 ------------------------#
-# TODO(Iteratively graph segments on map set to extent  of values in group)
+# TODO(Iteratively graph segments on map set to extent  of values in group) COMPLETED 3/19/2018 2:12:26 PM
 # https://stackoverflow.com/questions/15987367/how-to-add-layers-in-ggplot-using-a-for-loop
 # ----------------------- Sun Mar 18 14:23:52 2018 ------------------------#
 # 1. Create map of each area
 # 2. Iteratively graph segments with arrows indicating direction.
-# 3. Label starting point and ending point
+# 3. Label starting point and ending point COMPLETED 3/19/2018 2:12:40 PM
 center <- c(lon=mean(route$lon),lat=mean(route$lat))
 map.grp <- ggmap::get_googlemap(center=center, zoom=15, format="png8",maptype = "roadmap",scale=2)
 ggmap(map.grp)+
-  geom_point(data=route,mapping=aes(x=lon,y=lat),color="blue",size=.75)+
-  geom_path(data=route,mapping=aes(x=lon,y=lat),color="red",arrow= arrow(length = unit(3,"mm")))
+  geom_point(data=route,mapping=aes(x=lon,y=lat),color="blue",size=1)+
+  geom_point(data=route[1,],mapping=aes(x=lon,y=lat),color="blue",size=2)+
+  geom_path(data=route,mapping=aes(x=lon,y=lat),color="red",arrow= arrow(length = unit(3,"mm")))+
+  labs(title = "Route for D: Cluster 1",
+      subtitle = "Results of routes function",
+      caption = "",
+      x = "",y = "")
+#ggplot2::ggsave(filename="Route.pdf",plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
 ```
 
 ### Hierarchical Clustering for Variance Minimization
 
 <p><a href="http://uc-r.github.io/hc_clustering" target="_blank">HC Clustering.</a> The results are unimpressive. k-Means is more effective at partitioning the data in a logical fashion.</p>
-```{r 'Clustering for min Variance', echo=TRUE,eval=F}
+```{r 'Clustering for min Variance', fig.width=5,fig.height=5}
+# TODO(Add Hierarchical clustering options to function to allow for clustering based on the number of nodes in each cluster.)  3/19/2018 2:08:10 PM EDT
+
 data <- Voters.full
 hc.dropPoints <- function(data,f,c=NULL,verbose=F) {
   nms <- unique(data[[f]])
@@ -601,10 +703,213 @@ return(drop.areas)
 }
 
 hc.drops <- hc.dropPoints(data=data,f=f,verbose=T)
+```
 
+```{r 'Convex Hull for Grouped Data'}
+# ----------------------- Mon Mar 19 21:32:50 2018 ------------------------#
+# For debugging
+cdf <- hc.drops[["D"]][["1-Cuts:8"]]
+
+clustHull <- function(clusterlist,verbose=F){
+# ----------------------- Mon Mar 19 20:56:41 2018 ------------------------#
+# Create Output Object
+# Get names 
+  nms <- names(clusterlist)
+# Begin parsing clusterlist
+out <- lapply(clusterlist,function(cli){
+  cli.nms <- names(cli)
+  cli.chs <- lapply(cli,function(cdf){
+    # Get Lat and Lon var names
+    var.nums <- sapply(cdf,is.numeric)
+    lalo <- c(stringr::str_extract(var.num,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.num,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)])
+    #Get unique clusters/groups
+    grps <- unique(cdf[["Group"]])
+    #Make a convex hull for each
+    cdf.chs <- sapply(grps,function(grp,cdf,lalo){
+      crds <- unique(cdf[cdf[["Group"]] %in% grp,lalo])
+      cdf.ch <- chull(as.matrix(crds))
+      crds[,3] <- F
+      crds[cdf.ch,3] <- T
+      dist.crds <- dist(crds[cdf.ch,c(1:2)]) %>% as.matrix %>% colSums
+      attr(crds,"DC") <- names(which.min(dist.crds)) %>% as.numeric
+      names(crds) <- c(lalo,"hull")
+#Call DC - density.centroid Index with which(rownames(crds)==attr(crds,"DC"))
+    },cdf=cdf,lalo=lalo)
+  })
+ # Name it with original names for parity
+ names(cli.chs) <- cli.nms
+ return(cli.chs)
+})
+# Retain Names
+names(out) <- nms
+return(out)
+}
+# ----------------------- Mon Mar 19 22:12:12 2018 ------------------------#
+# Convert hull to polygon
+#https://stackoverflow.com/questions/25606512/create-convex-hull-polygon-from-points-and-save-as-shapefile
+
+#Could be a more robust way of finding the center of density, the minimum distance from all other points
+      dist.crds <- dist(crds[,c(1:2)])
+      crds.mat <- as.matrix(dist.crds)
+      crds.sums <- colSums(crds.mat)
+clustHull(hc.drops,)
+hc.drops$D$`4-Cuts:8`
+```
+
+
+```{r 'Constraining Hierarchical Cluster Data to Groups of Equali Sizes'}
+# ----------------------- Mon Mar 19 22:11:33 2018 ------------------------#
+# https://www.r-bloggers.com/spatial-clustering-with-equal-sizes/
+
+lat2 = as_radians(to$lat)
+lon2 = as_radians(to$lon)
+a = 3963.191;
+b = 3949.903;
+numerator = ( a^2 * cos(lat2) )^2 + ( b^2 * sin(lat2) ) ^2
+denominator = ( a * cos(lat2) )^2 + ( b * sin(lat2) )^2
+radiusofearth = sqrt(numerator/denominator) #Accounts for the ellipticity of the earth.
+d = radiusofearth * acos( sin(lat1) * sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2 - lon1) )
+d.return = list(distance_miles=d)
+return(d.return)
+}
+ 
+raw.og = read.csv("http://statistical-research.com/wp-content/uploads/2013/11/sample_geo.txt", header=T, sep="\t")
+ 
+orig.data = raw.og[,1:3]
+ 
+dirichletClusters_constrained = function(orig.data, k=7921, max.iter = 1000, tolerance = 237630, plot.iter=TRUE) {
+fr = to = NULL
+ 
+r.k.start = sample(seq(1:k))
+n = nrow( orig.data )
+k.size = ceiling(n/k)
+initial.clusters = rep(r.k.start, k.size)
+ 
+if(n%%length(initial.clusters)!=0){
+exclude.k = length(initial.clusters) - n%%length(initial.clusters)
+} else {
+exclude.k = 0
+}
+orig.data$cluster = initial.clusters[1:(length(initial.clusters)-exclude.k)]
+orig.data$cluster_original = orig.data$cluster
+ 
+## Calc centers and merge
+mu = cbind( by(orig.data$Latitude, orig.data$cluster, mean), by(orig.data$Longitude, orig.data$cluster, mean), seq(1:k) )
+tmp1 = matrix( match(orig.data$cluster, mu[,3]) )
+orig.data.centers = cbind(as.matrix(orig.data), mu[tmp1,])[,c(1:2,4:6)]
+ 
+## Calc initial distance from centers
+fr$lat = orig.data.centers[,3]; fr$lon = orig.data.centers[,4]
+to$lat = orig.data.centers[,1]; to$lon = orig.data.centers[,2]
+orig.data$distance.from.center = calc_dist(fr, to)$distance_miles
+orig.data$distance.from.center_original = orig.data$distance.from.center
+ 
+## Set some initial configuration values
+is.converged = FALSE
+iteration = 0
+error.old = Inf
+error.curr = Inf
+ 
+while ( !is.converged && iteration < max.iter ) { # Iterate until threshold or maximum iterations
+ 
+if(plot.iter==TRUE){
+plot(orig.data$Longitude, orig.data$Latitude, col=orig.data$cluster, pch=16, cex=.6,
+xlab="Longitude",ylab="Latitude")
+}
+iteration = iteration + 1
+start.time = as.numeric(Sys.time())
+cat("Iteration ", iteration,sep="")
+for( i in 1:n ) {
+# Iterate over each observation and measure the distance each observation' from its mean center
+# Produces an exchange. It takes the observation closest to it's mean and in return it gives the observation
+# closest to the giver, k, mean
+fr = to = distances = NULL
+for( j in 1:k ){
+# Determine the distance from each k group
+fr$lat = orig.data$Latitude[i]; fr$lon = orig.data$Longitude[i]
+to$lat = mu[j,1]; to$lon = mu[j,2]
+distances[j] = as.numeric( calc_dist(fr, to) )
+}
+ 
+# Which k cluster is the observation closest.
+which.min.distance = which(distances==min(distances), arr.ind=TRUE)
+previous.cluster = orig.data$cluster[i]
+orig.data$cluster[i] = which.min.distance # Replace cluster with closest cluster
+ 
+# Trade an observation that is closest to the giving cluster
+if(previous.cluster != which.min.distance){
+new.cluster.group = orig.data[orig.data$cluster==which.min.distance,]
+ 
+fr$lat = mu[previous.cluster,1]; fr$lon = mu[previous.cluster,2]
+to$lat = new.cluster.group$Latitude; to$lon = new.cluster.group$Longitude
+new.cluster.group$tmp.dist = calc_dist(fr, to)$distance_miles
+ 
+take.out.new.cluster.group = which(new.cluster.group$tmp.dist==min(new.cluster.group$tmp.dist), arr.ind=TRUE)
+LocationID = new.cluster.group$LocationID[take.out.new.cluster.group]
+orig.data$cluster[orig.data$LocationID == LocationID] = previous.cluster
+}
+ 
+}
+ 
+# Calculate new cluster means
+mu = cbind( by(orig.data$Latitude, orig.data$cluster, mean), by(orig.data$Longitude, orig.data$cluster, mean), seq(1:k) )
+tmp1 = matrix( match(orig.data$cluster, mu[,3]) )
+orig.data.centers = cbind(as.matrix(orig.data), mu[tmp1,])[,c(1:2,4:6)]
+mu = cbind( by(orig.data$Latitude, orig.data$cluster, mean), by(orig.data$Longitude, orig.data$cluster, mean), seq(1:k) )
+ 
+## Calc initial distance from centers
+fr$lat = orig.data.centers[,3]; fr$lon = orig.data.centers[,4]
+to$lat = orig.data.centers[,1]; to$lon = orig.data.centers[,2]
+orig.data$distance.from.center = calc_dist(fr, to)$distance_miles
+ 
+# Test for convergence. Is the previous distance within the threshold of the current total distance from center
+error.curr = sum(orig.data$distance.from.center)
+ 
+error.diff = abs( error.old - error.curr )
+error.old = error.curr
+if( !is.nan( error.diff ) && error.diff < tolerance ) {
+is.converged = TRUE
+}
+ 
+# Set a time to see how long the process will take is going through all iterations
+stop.time = as.numeric(Sys.time())
+hour.diff = (((stop.time - start.time) * (max.iter - iteration))/60)/60
+cat("\n Error ",error.diff," Hours remain from iterations ",hour.diff,"\n")
+ 
+# Write out iterations. Can later be used as a starting point if iterations need to pause
+write.table(orig.data, paste("C:\\optimize_iteration_",iteration,"_instore_data.csv", sep=""), sep=",", row.names=F)
+}
+ 
+centers = data.frame(mu)
+ret.val = list("centers" = centers, "cluster" = factor(orig.data$cluster), "LocationID" = orig.data$LocationID,
+"Latitude" = orig.data$Latitude, "Longitude" = orig.data$Longitude,
+"k" = k, "iterations" = iteration, "error.diff" = error.diff)
+ 
+return(ret.val)
+}
+ 
+# Constrained clustering
+cl_constrain = dirichletClusters_constrained(orig.data, k=4, max.iter=5, tolerance=.0001, plot.iter=TRUE)
+table( cl_constrain$cluster )
+plot(cl_constrain$Longitude, cl_constrain$Latitude, col=cl_constrain$cluster, pch=16, cex=.6,
+xlab="Longitude",ylab="Latitude")
+ 
+library(maps)
+map("state", add=T)
+points(cl_constrain$centers[,c(2,1)], pch=4, cex=2, col='orange', lwd=4)
+```
+
+```{r 'Visualize Cluster Output'}
 ggmap(Waltham)+
-  geom_point(data= hc.drops$D$`3-Cuts:10`,mapping = aes(x=lon,y=lat,color=Group),size=.75)+
-  scale_color_brewer(type="qual",palette = 2)
+  geom_point(data=hc.drops[["D"]][["4-Cuts:8"]],mapping = aes(x=lon,y=lat,color=Group),size=.75)+
+  scale_color_brewer(8,palette = "Set1")+
+  labs(title = "Factor: D",
+  subtitle = "Cuts = 8",
+  caption = "",
+  x = "",y = "") +
+  theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),legend.position = "none")
+  #ggplot2::ggsave(filename="HC.pdf",plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
+
 ```
 
 ## Visualizing Demographics
@@ -675,21 +980,20 @@ pp <- inner_join(pp,ppll,by=c("Addr"="address"))
 ```{r 'Graphing Data'}
 
 # ----------------------- Mon Mar 12 19:31:18 2018 ------------------------#
-# TODO(Calculate difference between years, and use diverging spectrum to indicate change. Replace 2013 graph with this graph. Change polling point color such that a comparison is not made with k-means graphs.)
+# TODO(Calculate difference between years, and use diverging spectrum to indicate change. Replace 2013 graph with this graph. Change polling point color such that a comparison is not made with k-means graphs.) COMPLETED 3/19/2018 2:13:10 PM
 
 # ----------------------- Mon Mar 12 12:20:43 2018 ------------------------#
 # 2013 Income
-CensusBG.W.Inc %<>% mutate(Diff=Income16-Income13)
+#CensusBG.W.Inc %<>% mutate(Diff=Income16-Income13)
 ggmap(Waltham)+
   geom_polygon(data=CensusBG.W.Inc,aes(x=long, y=lat, group=group, fill=Diff), size=.2,color='grey', alpha=.7)+
   scale_fill_gradientn(colors=RColorBrewer::brewer.pal(9,"PRGn"))+
-  geom_point(data=pp,mapping = aes(x=lon,y=lat))+
   labs(title = "Waltham Married Change in Median Income",
   subtitle = "2013-16 Change in Median Income by Census Block",
   caption = "",
   x = "",y = "") +
   theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank(),axis.ticks = element_blank())
-ggsave(last_plot(), filename = "IncDiff.pdf", path="Plots",device = "pdf",width = 5, height = 5, units = "in")
+#ggsave(last_plot(), filename = "IncDiff.pdf", path="Plots",device = "pdf",width = 5, height = 5, units = "in")
 # c <- RColorBrewer::brewer.pal(9,"Greens")
 # ggmap(Waltham)+
 #   geom_polygon(data=CensusBG.W.Inc,aes(x=long, y=lat, group=group, fill=Income13), size=.2,color='grey', alpha=.7)+
@@ -713,7 +1017,7 @@ ggmap(Waltham)+
   caption = "",
   x = "",y = "") +
   theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),axis.text = element_blank(),axis.ticks = element_blank(),plot.margin = margin(rep(0,4),"pt"))
-  ggsave(last_plot(), filename = "Inc16.pdf", path="Plots",device = "pdf",width = 5, height = 5, units = "in")
+  #ggsave(last_plot(), filename = "Inc16.pdf", path="Plots",device = "pdf",width = 5, height = 5, units = "in")
 
 ```
 
