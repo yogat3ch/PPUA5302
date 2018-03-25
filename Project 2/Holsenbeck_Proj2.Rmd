@@ -85,8 +85,12 @@ update_geom_defaults("text",list(colour="black",size=rel(2.5)))
 windowsFonts(AvantGarde=windowsFont("TT AvantGarde-Book"))
 windowsFonts(Helvetica=windowsFont("TT Helvetica"))
 ```
-# Data Reading & Wrangling
 
+# Introduction
+<p>The topic for project 2 evolved out of assistance I provided to a political campaign in the cith of Waltham when I first moved to the area in August 2017. In September, I did a simple summarize and filter operation of the top streets on which voters likely to be supporters of the campaign resided in order to provide canvassing teams some information as to where it would be beneficial to focus their efforts. With the new machine learning and data visualization skills acquired while learning Data Analytics at Northeastern, came new ideas and potentialities for how to better make use of this data. This document will provide an overview of the intention, methods, and outcomes this exploration entailed, and will highlight the outline of what could potentially become an R package for canvass campaign coordinators.</p>
+
+# Data Reading & Wrangling
+<p>Loading voter data, making some basic transforms. Extracting the addresses as a vector. Load all of the data I've used for the project.</p>
 ```{r 'Load Data'}
 Voters <- as.data.frame(readxl::read_xls(path="F:\\good voters 11-5-13 edited.xls",col_names = T))
 nms <- Voters[1, ] %>% as.vector %>% unclass %>% unlist
@@ -104,6 +108,7 @@ load("../.RData")
 
 
 ## Geocoding Addresses
+<p>The script below was used to geocode the formatted addresses in the data set to make them amenable to graphical representation, and to provide additional factors by which the data can be sorted. The operation was computationally expensive, and quite time consuming. Google limits unsubscribed users of the API to 2500 requests per 24 hour period. Thus it was necessary to make minimal examples to get the code right, then cross fingers and hope that the script handled exceptions appropriately and did not burn requests without retrieving the requested data due to malformed requests. Due to it's computational complexity, I've set this chunk not to evaluate, and instead loaded the output as an Rdata file in the 'Load Data' chunk.</p>
 ```{r 'Geocoding',eval=F}
 # ----------------------- Thu Mar 08 22:49:26 2018 ------------------------#
 # 2500 at a time based on free restrictions.
@@ -160,7 +165,7 @@ retry <- which(answer$locality!="Waltham")
 oql <- which(lapply(geo_replies,"[[","status")!="OK")
 lengths <- vector()
 for (l in seq_along(geo_replies)) {
-  lengths[l] <- geo_replies[[l]] %>% purrr::pluck(list("results",1,"address_components")) %>% length
+  lengths[l] <- geo_replies[[l]] %>% purrr::pluck(list("results",3,"address_components")) %>% length
 }
 which.max(lengths)
 write.csv(answer,"answer.csv")
@@ -168,18 +173,14 @@ save(geo_replies,file="geo_replies.Rdata")
 ```
 
 ### Joining with Original Data
+<p>This chunk comprises the operations necessary to format the data returned from the operation above to be joined with the original dataset. It also attempts to remedy any missing values found in the dataset. If missing values remained after the operations herein, they were removed.</p>
 ```{r 'Join Geocoded Data',eval=F}
-
-
 answer$postal_code %<>% gsub("^","0",.)
 # ----------------------- Sun Mar 11 18:04:20 2018 ------------------------#
 # Remove duplicates from answer
 sum(duplicated(Voters$`Voter ID Number`))
-
 names(answer)
 names(Voters)
-
-
 # ----------------------- Fri Mar 09 12:05:11 2018 ------------------------#
 # Format Addresses the same
 simpleCap <- function(x) {
@@ -227,21 +228,38 @@ Voters.full  %<>%  filter(!is.na(lat)) %>% filter(!is.na(lon))
 
 ## Exploration
 ### Data Exploration
+<p>Basic exploratory table and graph of the factor of interest on which all following segmentation of the data will take place.</p>
 ```{r 'Explore data'}
 table(Voters.full$`Party Affiliation`)
 qplot(Voters.full$`Party Affiliation`)
 ```
 
 ### Exploratory Graphs
+<p>An overall lay of the political landscape in Waltham.</p>
 ```{r 'Map by Party'}
 center <- c(lon=mean(Voters.full$lon),lat=mean(Voters.full$lat))
 Waltham <- ggmap::get_googlemap(center=center, zoom=13, format="png8",maptype = "roadmap",scale=2)
+
+clrs <- RColorBrewer::brewer.pal(4,"Set1")[c(2,4,1,3)]
+szs <- c(1.5,1.5,.8,.6)
+names(clrs) <-  names(szs) <- Voters.full$`Party Affiliation` %>% unique()
 ggmap(Waltham) +
-  geom_point(data=Voters.full, mapping=aes(x=lon, y=lat, color=`Party Affiliation`),size=.5,na.rm=F)
+  geom_point(data=Voters.full, mapping=aes(x=lon, y=lat, color=`Party Affiliation`,shape=`Party Affiliation`),size=.8,na.rm=F)+
+  scale_color_manual(values=clrs)+
+  scale_size_manual(values = szs)+
+  labs(title = "Voters by Party Affiliation in Waltham",
+  subtitle = "",
+  caption = "",
+  x = "",y = "") +
+  theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),legend.position = "bottom",legend.direction = "horizontal")+
+  guides(color=guide_legend(override.aes = list(size=2)), size = guide_legend(override.aes = list(size=2)))
+  
 ```
 
 ## Campaign modeling
+
 ### k-Means for canvassing campaign drop points
+<p> For a campaign, the number of volunteers available for canvassing can help determine the model to use for drop point selection: where the number of volunteers is equal to the number of clusters. Alternatively, the number of volunteers can be used to select the model k value. This chunk explores the dataset manually using an iterative k-means operation with a tuning grid for parameter values. Each model is assessed based on all the criteria in the clusterCrit package. Each criteria has an equally weighted vote - the models with the most votes are included in the index. All of the k-means models for the Democrats in Waltham are graphed with a Voronoi tesselation from the deldir package to provide visual segmentation of clusters.</p>
 ```{r 'K-Means - D'}
 # ----------------------- Fri Mar 09 17:16:24 2018 ------------------------#
 # Using an iterative training approach to find the best kmeans model
@@ -267,9 +285,9 @@ for (c in seq_along(critNames)) {
 best <- names(bestIndex.crit) %>% as.numeric
 pars[best,]
 bestCl <- clusters %>% subset(seq_along(clusters)%in%best)
-dPts <- lapply(bestCl, "[[","centers") %>% unique)
+dPts <- lapply(bestCl, "[[","centers") %>% unique
 # ----------------------- Fri Mar 09 17:53:32 2018 ------------------------#
-# Visualize the D>rop points
+# Visualize the Drop points
 # ----------------------- Sun Mar 11 19:36:43 2018 ------------------------#
 # Add Voronoi diagram
 
@@ -294,46 +312,102 @@ for (d in seq_along(dPts)) {
   geom_point(data=dPts[[d]], mapping=aes(x=lon, y=lat),color="black"))}
 }
 ```
-<p> For a campaign, the number of volunteers available for canvassing can help determine the model to use for drop point selection, where the number of volunteers is closest to the number of centroids. Alternatively, the number of volunteers can be used to select the model based on the number of centroids.</p>
-### Functionalize drop points algorithm
-<strong>Inputs</strong>: 
-<ol>
-<li>data - voter data as data frame, f: factor on which to split the data for each clustering operation. Latitude and Longitude columns must be labeled lat and lon respectively and the factor variable name to split the data on must corresponding exactly to the character vector for f.</li>
-<li>f - a character vector equivalent to the name of the factor variable on which to split the data (typically party affiliation.)</li>
-<li>k: k (centroids) an integer vector of the number of possible drop points.</li>
-<li><em>Optional</em> nms: The names of the factor levels to compute drop points for (party affiliation abbvs typically).</li>
-<li><em>Optional</em> best.clust: A logical indicating the best clusters are requested in the output, if FALSE, all the clusters are included in the output.</li>
-</ol>
- <strong>Outputs</strong>: a list, with sublists for each factor level, each with 3 sublists for each unique factor level. 
-<ol>
-<li>[['BestConfigs']] contains the parameters for the best configurations of kmeans. </li>
-<li>[['DropCoords']] - a list of the drop points corresponding to each of the best cluster models.</li>
-<li>[['Clusters']] - a list of the highest performing cluster models. If best.clust=FALSE, a list containing [['clusters']] - all cluster models and [['performance']] - the respective performance of each cluster across numerous criteria. (See ?clusterCrit for details on performance criteria)</li>
-</ol>
+
+### dropPoints function
+<p>Taking what was learned in the initial trial run above, the inspiration came to functionalize this operation such that a dataset can be provided and k-means clustering is performed for a canvassing campaign coordinator whom only needs to know how to provide to the function the parameters of the dataset, and basic parameters for k-means to receive workable clusters of the geographic data.</p>
+<h3>Arguments</h3>: 
+<table summary="R argblock">
+<tbody>
+<tr valign="top">
+<td><code>data</code></td>
+<td>
+<p></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code></code></td>
+<td>
+<p>Input data as dataframe. Latitude and Longitude columns must be labeled la and lo at the very least or any longer variation (case insensitive) to be detected. <em>Required</em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>f</code></td>
+<td>
+<p>The name of the factor variable on which to split the data. Must be a character vector enclosed in quotes <em>Required</em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>k</code></td>
+<td>
+<p>The k (# of centroids/clusters) for k-means, an integer vector of the number of clusters to try. <em>Optional: Defaults to <pre>c(2:10)</pre></em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>nms</code></td>
+<td>
+<p>The names of the factor levels to compute clusters for. <em>Optional: Defaults to all except those with fewer than 10 values.</em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>best.clust</code></td>
+<td>
+<p>A logical indicating the best clusters are requested in the output and the cluster evaluation criterion votind method should be used. If FALSE, all the clusters (for all methods and all k values) are included in the output. <em>Optional: Defaults to T.</em><em style="text-decoration:underline;"> Note:</em> criterion voting is more computationally complex so can force the function to take longer in evaluation. If pressed for time, set to F. Otherwise, leave enabled for optimal (and fewer) cluster outputs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Details</h3>
+A list, with sublists for each factor level, each with 3 sublists for each unique factor level, explained further in Value. 
+<h3>Value</h3>
+<table>
+<tbody>
+<tr valign="top">
+<td><code>[['BestConfigs']]</code></td>
+<td>
+<p>Contains the parameters for the best configurations of kmeans.</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>[['DropCoords']]</code></td>
+<td>
+<p>a list of the drop points corresponding to each of the best cluster models.</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>[['Clusters']]</code></td>
+<td>
+<p><ol>
+<li>If best.clust=TRUE, a list of the highest performing cluster models. If best.clust=FALSE, a list containing [['clusters']] - a list of all clusters.</li>
+<li>[['performance']] - the respective performance of each cluster across numerous criteria. <em>(See ?clusterCrit for details on performance criteria)</em></li>
+</ol> </p>
+</td>
+</tr>
+</tbody>
+</table>
+
 ```{r 'dropPoints - Cluster based on factor'}
-f <- "Party Affiliation"
-data <- Voters.full
 # ----------------------- Fri Mar 09 17:56:06 2018  ------------------------#
 # Kmeans for drop points sorted by factor
-dropPoints <- function(data,f,k=c(1:10),nms=NULL,best.clust=T) {
+dropPoints <- function(data,f,k=c(2:10),nms=NULL,best.clust=T) {
 # ----------------------- Fri Mar 09 18:12:36 2018 ------------------------#
-# Inputs: data - voter data as data frame, f: factor on which to split the data for each clustering operation, k: k (centroids) a vector of the number of possible drop point.nms: The names of the factor levels to compute drop points for (party affiliation abbvs typically). best.clust: A logical indicating the best clusters are requested in the output, if FALSE, all the clusters are included in the output.
+# Inputs: data - voter data as data frame, f: factor on which to split the data for each clustering operation, k: k (centroids) a vector of the number of possible drop point. nms: The names of the factor levels to compute drop points for (party affiliation abbvs typically). best.clust: A logical indicating the best clusters are requested in the output, if FALSE, all the clusters are included in the output.
 # Outputs: a list, with sublists for each factor level, each with 3 sublists for each unique factor level. 
 #[[BestConfigs]] contains the parameters for the best configurations of kmeans. 
 # [['DropCoords']] - a list of the drop points corresponding to each of the cluster models
 # [['Clusters']] - a list of the highest performing cluster models.If best.clust=FALSE, a list containing [['clusters']] - all cluster models and [['performance']] - the respective performance of each cluster across numerous criteria. (See ?clusterCrit for details on performance criteria)
+# 3/21/2018 9:45:31 PM TODO(Needs if control statement for best.clust=T v best.clust=F)         
   if(is.null(nms)){nms <- unique(data[[f]])} 
-  ko <- k
   drops <- vector("list",length(nms))
   names(drops) <- nms
   alg <- c("Hartigan-Wong", "Lloyd", "Forgy","MacQueen")
   pars <- expand.grid(alg=alg,k=k,stringsAsFactors = F)
+  var.num <- names(data)[sapply(data,is.numeric)]
+lalo <- c(stringr::str_extract(var.num,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.num,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)])
   # Begin party loop
   for (n in seq_along(nms)) {
-    k <- ko
     clusters <- vector("list",nrow(pars))
     performance <- vector("list",nrow(pars))
-    df.f <- data %>% subset(.[[f]]==nms[n]) %>% select(c("lat","lon"))
+    df.f <- data %>% subset(.[[f]]==nms[n]) %>% select(c(lalo))
     df <- scale(df.f)
     if(nrow(df.f) < max(k)){k <- c(1:(nrow(df.f)-1))
     pars <- expand.grid(alg=alg,k=k,stringsAsFactors = F)
@@ -351,7 +425,6 @@ names(critNames) <- critNames %>% unlist
     }
     (bestIndex.crit <- table(critNames %>% unlist))
     best <- names(bestIndex.crit) %>% as.numeric
-    
     bestCl <- clusters %>% subset(seq_along(clusters)%in%best)
     matCl <- lapply(bestCl, "[[","cluster")
     dropPts <- vector("list",length(matCl))
@@ -366,12 +439,13 @@ names(critNames) <- critNames %>% unlist
   
   return(drops)
 }
-
-drops <- dropPoints(data=data,f="Party Affiliation")
+f <- "Party Affiliation"
+data <- Voters.full
+drops <- dropPoints(data=data,f=f)
 ```
 
 ### Visualizing Centers
-<strong>Vectorized add Group Col to Data</strong>
+<p>This chunk adds the group columns from the dropPoints function output to the original data such that it can be easily filtered by group for future functions.</p>
 ```{r 'Vectorized add Group Col to Data'}
 # ----------------------- Sat Mar 17 16:36:52 2018 ------------------------#
 # Cluster the data, graph to ensure arruracy
@@ -391,12 +465,31 @@ data.clusters <- sapply(nms,FUN=function(nm,drops,data,lalof){
   return(d.grpd.cls)
 },drops=drops,data=data,lalof=lalof)
 ```
+
+#### startPoints Function: find optimal starting points based on pop. density.
 <strong>startPoints</strong>
 <p class="a">
-A function that finds startings points at the center of density for the area to ensure the time available canvassing captures the greatest number of voters.<p>
- <em>Inputs:</em>  
- data - original data, grp - variable name for the cluster group value
- <em>Outputs:</em> A df with three columns, lat/lon & Group id
+This function finds startings points at the center of poulation density for the cluster. By starting the route at the point with the highest population density, it ensures that the time available canvassing captures the greatest number of voters. Volunteers often have only a certain amount of time to spare, this function helps to make that time more effective.<p>
+<h3>Arguments</h3>  
+<table>
+<tbody>
+<tr valign="top">
+<td><code>data</code></td>
+<td>
+<p>original data with group column added based on the selected k-means output.</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>grp</code></td>
+<td>
+<p>The variable name chosen for the column with cluster group value. A character vector.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Value</h3>
+<p>A dataframe with three columns, lat/lon of the starting point & group id.</p>
+<p>Just below the function is a short script to vectorize this function over all data in the output from dropPoints.</p>
 ```{r 'Locate the starting point'}
 # ----------------------- Sat Mar 17 16:28:04 2018 ------------------------#
 # Inputs: data - original data, grp - variable name for the cluster group value
@@ -427,7 +520,7 @@ d.grp[which.max(d.grp.nn),] # Returns the index of the point with the most neare
  sPs <- as.data.frame(matrix(data=sPs %>% unlist,ncol=3,byrow=T,dimnames = list(rows=NULL,cols=lalogrp)))
  return(sPs)
 }
-#sPs <- startPoints(D.grpd,"Group") #For Testing
+sPs <- startPoints(D.grpd,"Group") #For Testing
 # ----------------------- 3/19/2018 3:51:58 PM ------------------------#
 # Vectorization of startPoints function 
 sPs <- sapply(data.clusters,function(item){
@@ -437,14 +530,46 @@ sPs <- sapply(data.clusters,function(item){
 })
 
 
-meters <- c(lat=111080.83603511854,lon=111577.12826935215) # Meters per unit latitude,longitude
+meters <- c(lat=111080.83603511854,lon=111577.12826935215) # Meters per unit latitude,longitude - not used.
 ```
 
+#### visDrops function: visualizing groups with centroids or starting points.
+
+<p>This function is intended for visualizing output from the dropPoints function such that specific cluster models can be selected visually. The function prints each graph to the chunk output. Commented within the function is a ggsave command that allowed saving the individual graphs to pdf for use in the presentation.</p>
+<h3>Arguments</h3>
+<table>
+<tbody>
+<tr valign="top">
+<td><code>data</code></td>
+<td>
+<p>The original data with lat/lon, does not need cluster group value column as that is extracted from the dropPoints output argument: drops</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>f</code></td>
+<td>
+<p>The column name with the factor by which the data was sorted. 3/21/2018 10:06:37 PM TODO(Include functionality to allow this to be omitted if drops is provided)</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>drops</code></td>
+<td>
+<p>The output list from the dropPoints algorithm</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>sPs</code></td>
+<td>
+<p>The lists of starting points dataframes from the vectorization of the startPoints algorithm over the data with cluster group id column. 3/21/2018 10:09:02 PM TODO(Standardize the outputs to either the smallest unit of output or for a common output across each function for a linear progression of inputs & outputs)</p>
+</td>
+</tr>
+</tbody>
+</table>
 
 ```{r 'visDrops Function for Visualizing Centers'}
 # ----------------------- Fri Mar 09 17:53:32 2018 ------------------------#
 # Visualize the Drop points
-# TODO(Add support for hierarchical clustering and bounding boxes around clusters.) 3/19/2018 2:10:01 PM EDT
+# 3/19/2018 2:10:01 PM EDT TODO(Add support for hierarchical clustering and bounding boxes around clusters.) 
 visDrops <- function(data=data,f=f,drops=drops,sPs=NULL) {
   
   c <- RColorBrewer::brewer.pal(length(drops),"Set1")
@@ -509,7 +634,7 @@ visDrops(data=data,f=f,drops=drops, sPs=sPs)
 
 
 
-<strong>Route Optimization - Function: routes() </strong>
+### routes function: Route Optimization
 <p>The function expects data with a column entitled "Group" (or specify with grp argument) that contains the cluster number the observation belongs to. The data is filtered by group. The function then uses an iterative k-nearest neighbors from the spdep package to provide an index of "as the crow flies" nearest neighbors for each point observation in the cluster. The starting points sPs object is used to select the point with the highest number of nearest neighbors within one standard deviation to start the route data frame (route). The nearest neighbors indexes for this point (d.nn columns: nnX) are used to subset the cluster to just the k-nearest neighbors as potential destinations (nn). K defaults to 5 and increments up if all k nearest neighbors are already in the route, the overall nearest neighbors index object (d.nn) is then subsetted to include only points not already in the route before recalculating nearest neighbors indexes. The nearest neighbors (nn) are used to minimize the number of requests made on the gmapsdistance API, as a standard plan API key has <a href="https://developers.google.com/maps/documentation/javascript/usage">rate limits</a>. The return from gmapdistance is used to select the point with the least walking time as the next destination that is added to the route. The next iteration of loop starts with this point. The outcome (provided no errors are encountered), is a list of data frames, one for each cluster, with a list of the unique points in the cluster sorted into a shortest path walking route indicated by the Index column. The first point will be the optimal point to start so as to maximize the number of canvassed houses in the least amount of time. The data frames can be joined with the original data to include the full data for each observation sorted by factor. The data is then filtered by group to form new dataframes for each of the groups. Each group dataframed is sorted by index for optimal route, and then provided to the canvasser.   
 </p>
 
@@ -628,11 +753,11 @@ d.knn.lastobs <- d.knn[d.knn[,1]==route[r,1] & d.knn[,2]==route[r,2],] # The row
   },data=data,grp=grp,key=key)
 return(out)
 }
-Routes <- routes(sPs=sPs, data=data, key=key) #UNtested
+#Routes <- routes(sPs=sPs, data=data, key=key) #UNtested
 ```
 
-### Visualizing Route
-
+#### Visualizing routes
+<p>The visual output from the routes function. I selected a specific route to visualize for the poster. 3/21/2018 10:10:54 PM TODO(Functionalize this for visualizing routes in a vectorized operation over the list output from routes, iteratively printing graphs.)</p>
 ```{r 'Visualizing Route'}
 # ----------------------- Sun Mar 18 08:45:56 2018 ------------------------#
 # TODO(Iteratively graph segments on map set to extent  of values in group) COMPLETED 3/19/2018 2:12:26 PM
@@ -654,9 +779,40 @@ ggmap(map.grp)+
 #ggplot2::ggsave(filename="Route.pdf",plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
 ```
 
-### Hierarchical Clustering for Variance Minimization
+### hc.dropPoints function: Hierarchical Clustering for Variance Minimization
 
-<p><a href="http://uc-r.github.io/hc_clustering" target="_blank">HC Clustering.</a> The results are unimpressive. k-Means is more effective at partitioning the data in a logical fashion.</p>
+<p><a href="http://uc-r.github.io/hc_clustering" target="_blank">HC Clustering.</a> The results are fairly unimpressive. I find that k-Means is more effective at partitioning the data in a geographically more contained manner.</p>
+<h3>Arguments</h3>
+<table>
+<tbody>
+<tr valign="top">
+<td><code>data</code></td>
+<td>
+<p>Input data as dataframe. Latitude and Longitude columns must be labeled la and lo at the very least or any longer variation (case insensitive) to be detected. <em>Required</em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>f</code></td>
+<td>
+<p>The name of the factor variable on which to split the data. Must be a character vector enclosed in quotes <em>Required</em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>k</code></td>
+<td>
+<p>The c (# of hierarchical clusters), an integer vector of the number of clusters to try. <em>Optional: Defaults to <pre>c(2:10)</pre></em></p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>verbose</code></td>
+<td>
+<p>A logical indicating whether debugging output should be printed to the console.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Value</h3>
+
 ```{r 'Clustering for min Variance', fig.width=5,fig.height=5}
 # TODO(Add Hierarchical clustering options to function to allow for clustering based on the number of nodes in each cluster.)  3/19/2018 2:08:10 PM EDT
 
@@ -669,7 +825,7 @@ hc.dropPoints <- function(data,f,c=NULL,verbose=F) {
   lalo <- c(stringr::str_extract(var.num,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.num,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)])
   #Begin party loop
   for (m in seq_along(nms)) {
-    df.f <- (data %>% subset(subset=(.[[f]]==nms[m])) -> df.s) %>% select(c("lat","lon")) %>% stats::dist(method= "euclidean")
+    df.f <- (data %>% subset(subset=(.[[f]]==nms[m])) -> df.s) %>% select(lalo) %>% stats::dist(method= "euclidean")
    # Dissimilarity matrix
     if(nrow(df.s) < 10){drop.areas[[nms[m]]] <- "Under 10 observations, no clustering necessary"
       next}
@@ -705,10 +861,34 @@ return(drop.areas)
 hc.drops <- hc.dropPoints(data=data,f=f,verbose=T)
 ```
 
+### clustHull function: create convex hulls for visually containing clusters from other function outputs.
+<p>This function was created as per suggestion of Pablo to confine each area in a convex hull. It is currently coded to work with the output of hc.dropPoints. 3/21/2018 10:25:08 PM TODO(Create an if detection and control mechanism to also process output from dropPoints)</p>
+<table>
+<tbody>
+<tr valign="top">
+<td><code>clusterlist</code></td>
+<td>
+<p>Currently the list output from hc.dropPoints for which convex hulls will be generated.</p>
+</td>
+</tr>
+<tr valign="top">
+<td><code>verbose</code></td>
+<td>
+<p>logical indicating whether debugging output should be printed to the console.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Value</h3>
+<p>This function returns a list of dataframes with the same structure as the hc.dropPoints output each with lon/lat data segmented by group, with a T/F column indicating whether the value belongs to the convex hull. Each dataframe includes two attributes:
+<ol>
+<li><strong>attr("DC"):</strong> The rowname from the original data set that contains the lat/lon point at which the center of pop. density lies based on points solely on the hull. </li>
+<li><strong>attr("Group"):</strong> The group id to which the dataframe belongs.</li>
+</ol></p>
 ```{r 'Convex Hull for Grouped Data'}
 # ----------------------- Mon Mar 19 21:32:50 2018 ------------------------#
 # For debugging
-cdf <- hc.drops[["D"]][["1-Cuts:8"]]
+
 
 clustHull <- function(clusterlist,verbose=F){
 # ----------------------- Mon Mar 19 20:56:41 2018 ------------------------#
@@ -717,49 +897,64 @@ clustHull <- function(clusterlist,verbose=F){
   nms <- names(clusterlist)
 # Begin parsing clusterlist
 out <- lapply(clusterlist,function(cli){
+  if(!is.list(cli)){out <- cli
+  return(out)}
   cli.nms <- names(cli)
+  if(verbose==T){print(cli.nms)}
   cli.chs <- lapply(cli,function(cdf){
+    if(verbose==T){print(class(cdf))}
     # Get Lat and Lon var names
-    var.nums <- sapply(cdf,is.numeric)
-    lalo <- c(stringr::str_extract(var.num,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.num,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)])
+    var.nums <- sapply(cdf,is.numeric) %>% names
+    lalo <- c(stringr::str_extract(var.nums,regex("(?:lat?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)],stringr::str_extract(var.nums,regex("(?:lon?g?i?t?u?d?e?)",ignore_case=T)) %>% .[!is.na(.)])
     #Get unique clusters/groups
     grps <- unique(cdf[["Group"]])
     #Make a convex hull for each
     cdf.chs <- sapply(grps,function(grp,cdf,lalo){
+      if(verbose==T){print(grp)}
       crds <- unique(cdf[cdf[["Group"]] %in% grp,lalo])
       cdf.ch <- chull(as.matrix(crds))
       crds[,3] <- F
       crds[cdf.ch,3] <- T
       dist.crds <- dist(crds[cdf.ch,c(1:2)]) %>% as.matrix %>% colSums
       attr(crds,"DC") <- names(which.min(dist.crds)) %>% as.numeric
+      attr(crds,"Group") <- grp
       names(crds) <- c(lalo,"hull")
+      return(crds)
 #Call DC - density.centroid Index with which(rownames(crds)==attr(crds,"DC"))
-    },cdf=cdf,lalo=lalo)
+    },cdf=cdf,lalo=lalo,simplify = F)
   })
  # Name it with original names for parity
  names(cli.chs) <- cli.nms
- return(cli.chs)
+ sPs <- lapply(cli.chs,function(sli){
+   sP <- sapply(sli,function(sdf){
+     sp <- c(unlist(sdf[which(rownames(sdf)==attr(sdf,"DC")),lalo,drop=T]),attr(sdf,"Group"))
+   },simplify = T) %>% t %>% as.data.frame()
+   names(sP) <- c(lalo,"Group")
+   return(sP)
+ })
+ cli.chs.sPs <- list(startingPoints=sPs,Chulls=cli.chs)
+ return(cli.chs.sPs)
 })
 # Retain Names
+
 names(out) <- nms
 return(out)
 }
+
 # ----------------------- Mon Mar 19 22:12:12 2018 ------------------------#
 # Convert hull to polygon
 #https://stackoverflow.com/questions/25606512/create-convex-hull-polygon-from-points-and-save-as-shapefile
 
 #Could be a more robust way of finding the center of density, the minimum distance from all other points
-      dist.crds <- dist(crds[,c(1:2)])
-      crds.mat <- as.matrix(dist.crds)
-      crds.sums <- colSums(crds.mat)
-clustHull(hc.drops,)
-hc.drops$D$`4-Cuts:8`
+     
+hc.hulls <- clustHull(hc.drops,verbose=T)
+
 ```
 
 
-```{r 'Constraining Hierarchical Cluster Data to Groups of Equali Sizes'}
+```{r 'Constraining Hierarchical Cluster Data to Groups of Equal Sizes',eval=F}
 # ----------------------- Mon Mar 19 22:11:33 2018 ------------------------#
-# https://www.r-bloggers.com/spatial-clustering-with-equal-sizes/
+# TODO(https://www.r-bloggers.com/spatial-clustering-with-equal-sizes/)
 
 lat2 = as_radians(to$lat)
 lon2 = as_radians(to$lon)
@@ -899,9 +1094,23 @@ map("state", add=T)
 points(cl_constrain$centers[,c(2,1)], pch=4, cex=2, col='orange', lwd=4)
 ```
 
+<p>Visualizing the convex hulls needs some fine tuning. It looks like the segments are being drawn all out of order to form the polygon.</p>
 ```{r 'Visualize Cluster Output'}
+# ----------------------- Wed Mar 21 22:48:31 2018 ------------------------#
+# Add Hulls
+#Combine each into one large df
+hulls <- do.call("rbind",hc.hulls[["D"]][["Chulls"]][["4-Cuts:8"]])
+# Get the starting points on the hull
+hull.sps <- sapply(hc.hulls[["D"]][["Chulls"]][["4-Cuts:8"]],attr,"DC",simplify = T)
+
+# get the gtroups
+rns <- lapply(hc.hulls[["D"]][["Chulls"]][["4-Cuts:8"]],rownames)
+test <- purrr::map2(.x=rns,.y=1:8,function(.x,.y){rep(.y,length(.x))})
+hulls$Group <- test  %>% unlist
+hulls.gg <- hulls[hulls$hull==T,]
 ggmap(Waltham)+
   geom_point(data=hc.drops[["D"]][["4-Cuts:8"]],mapping = aes(x=lon,y=lat,color=Group),size=.75)+
+   geom_polygon(data=hulls.gg,mapping = aes(x=lon,y=lat,group=Group),fill=NA,color="red")+
   scale_color_brewer(8,palette = "Set1")+
   labs(title = "Factor: D",
   subtitle = "Cuts = 8",
@@ -909,12 +1118,13 @@ ggmap(Waltham)+
   x = "",y = "") +
   theme(plot.title = element_text(hjust = .5),plot.subtitle = element_text(hjust = .5),legend.position = "none")
   #ggplot2::ggsave(filename="HC.pdf",plot=last_plot(), path="Plots",device = "pdf",width = 5, height = 5, units = "in")
-
+View(hc.drops[["D"]][["4-Cuts:8"]])
 ```
 
 ## Visualizing Demographics
 
 ### Load Data
+<p>Loading and joining census data. This proved to be an unfruitful endeavor, so I approached it differently in the next chunk.</p>
 ```{r 'Income Data by Block Group', echo=F,eval=F}
 ds <- c("B19013")
 yr <- c(thirteen='13',sixteen='16')
@@ -941,7 +1151,7 @@ ds.li[["sixteen"]][["B19013"]][["data"]] <- ds.li[["sixteen"]][["B19013"]][["dat
 ```
 
 
-```{r 'Load Block Groups', echo=TRUE}
+```{r 'Load Block Groups', echo=TRUE,eval=F}
 censusblocks <- read.csv(file="C:\\Users\\Stephen\\Documents\\Northeastern\\Git\\ppua5302\\Project 2\\Waltham\\CensusBlocks.csv")
 CensusBG <- c("C:\\Users\\Stephen\\Documents\\Northeastern\\Git\\ppua5302\\Project 2\\Waltham\\CensusBlocks\\Census 2010 Block Groups\\GISDATA_CENSUS2010BLOCKGROUPS_POLY.shp")
 CensusBG<- rgdal::readOGR(dsn=CensusBG)
@@ -974,9 +1184,12 @@ pp$Addr[5] <- "494 Lincoln Street"
 pp$Addr <- paste(pp$Addr," Waltham",", MA",sep="")
 ppll <- geocode(pp$Addr,output = c("latlona"),source="dsk")
 ppll <- ppll %>% unique
+ppll$address %<>% as.character
 pp <- inner_join(pp,ppll,by=c("Addr"="address"))
 ```
 
+### Visualizing census data
+<p>These graphs were used in the presentation for the economics and access section.</p>
 ```{r 'Graphing Data'}
 
 # ----------------------- Mon Mar 12 19:31:18 2018 ------------------------#
@@ -984,7 +1197,7 @@ pp <- inner_join(pp,ppll,by=c("Addr"="address"))
 
 # ----------------------- Mon Mar 12 12:20:43 2018 ------------------------#
 # 2013 Income
-#CensusBG.W.Inc %<>% mutate(Diff=Income16-Income13)
+CensusBG.W.Inc %<>% mutate(Diff=Income16-Income13)
 ggmap(Waltham)+
   geom_polygon(data=CensusBG.W.Inc,aes(x=long, y=lat, group=group, fill=Diff), size=.2,color='grey', alpha=.7)+
   scale_fill_gradientn(colors=RColorBrewer::brewer.pal(9,"PRGn"))+
