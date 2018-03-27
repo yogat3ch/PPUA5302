@@ -1,0 +1,276 @@
+---
+title: "Holsenbeck_S: Text Analysis"
+author: "Stephen Synchronicity"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+always_allow_html: yes
+header-includes:
+   - \usepackage{dcolumn}
+output: 
+  html_document: 
+    self_contained: yes
+    css: C:\Users\Stephen\Documents\R\win-library\3.4\neuhwk\rmarkdown\templates\report\resources\bootstrap.min.css
+    highlight: zenburn
+    keep_md: no
+    theme: spacelab
+    toc: yes
+    toc_float: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE, fig.align='center', fig.height=3.5, fig.width=5, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+rmarkdown::html_dependency_jquery()
+rmarkdown::html_dependency_bootstrap("spacelab")
+rmarkdown::html_dependency_jqueryui()
+set.seed(1)
+options(scipen=12)
+req.packages <- c("tidyverse","dplyr","htmltools","magrittr")
+for (q in seq_along(req.packages)) {
+  suppressPackageStartupMessages(library(req.packages[q],character.only = T))
+}
+```
+<button data-toggle="collapse" data-target="#demo" class="btn">Loading Document</button>
+<div id="demo" class="collapse">
+```{r 'Load Paper'}
+lp <- list(Intro="In this paper I hope to contrast the ontologies of Sartre and Merleau-Ponty; Sartre as the philosopher of Nothingness and Merleau-Ponty as the philosopher of Flesh. Both Sartre and Merleau-Ponty take up the project of phenomenology; which hopes to find a solution to the problems of Cartesian dualism. Both philosophers describe the body as a central part of their respective ontologies as incorporating aspects of both immanence and transcendence. The desired outcome is a descriptive project that would posit an essential intertwining of the immanent and transcendent, the body and consciousness, self and world. The ideas we get of the in-itself and the for-itself in Sartre, and the way in which we understand them in relation to the body is analogous to the ideas of immanence and transcendence. It seems that the way that Sartre posits these categories of being is as ontologically incommensurable. I will use secondary literature by Martin Dillon to illustrate this point. In the paper, 'Sartre on the Phenomenal Body and Merleau-Ponty’s Critique,' Dillon gives us an extremely clear and sophisticated discussion of Sartre’s ontological body, and alludes briefly to Merleau-Ponty’s critique. What Dillon does not do in his paper is suggest to us a phenomenal ontology of body that might stand in place of Sartre’s.[1] I would want to additionally go further and examine Merleau-Ponty’s ontology as one which is also taking up the same project but is more successful at unifying the body, mind, and world as continuous.", 
+     `Sarte_Ontology`="In Being and Nothingness (hereafter referred to as BN) Sartre’s overall project is a phenomenal ontology. This includes a conception of consciousness, the body, and the world. As is common in phenomenology from Husserl onwards, Sartre is positing his project not only as a descriptive means of understanding what exists in the world, but also as a possible alternative to the adherence to Cartesianism that existed at the time as the foundation for many of the empirical sciences. Phenomenology hopes to offer an alternative to this by going back to the things in themselves in the hopes of avoiding some of the problems of Cartesianism. To this point, Sartre states, 'To be sure, our concern is not that of Descartes and we do not conceive of imagination as he did. But what we can retain is that it is not profitable first to separate the two terms of a relation in order to try to join them together again later' (BN 33). While in this particular iteration of his project, Sartre states that he does not wish to separate two terms of relations only to attempt to join them together again, he still does wish to posit to realms of being that may be seen as incommensurable. The ontological categories that Sartre posits are the for-itself (pour soi) and in-itself (en soi).",
+     `Sarte_Concept_of_Body`="When Sartre’s ontology is applied to the body and how the body interacts with the world, we get the body-for-me, and the body-for-others. On another level the body-for-me, and the body-for-others may also be understood as analogous to the immanent and the transcendent. In addition to these two ontological dimensions of the body we get a third as well. Sartre additionally posits the body-for-itself-for-others, which is his attempt to create coherence between the body-for-itself and the body-for-others (or analogously the immanent and the transcendent). In the chapter on the body in BN Sartre wants to illustrate the body as a whole, continuous being, at once radically free, but yet at the same time conditioned by the world and the situation. Sartre is attempting to give us a conception of the body that overcomes the mind/body dualism we find in Descartes:
+
+[...] we must keep constantly in mind the idea that since these two aspects of the body are on different and incommunicable levels of being, they can not be reduced to one another. Being-for-itself must be wholly body and it must be wholly consciousness; it can not be united with a body. Similarly being-for-others is wholly body; there are no 'psychic phenomena' there to be united with the body. There is nothing behind the body. The body is wholly 'psychic.' (BN 404)
+
+
+Sartre gives a description of the lived body as at the same time 'wholly psychic,' and 'wholly body.' The question that must be raised here is: how, then, can both the body for me (for itself) and the body for others exist together in the same world when Sartre has also relegated them to two ontologically incommensurable realms of being? As Sartre posits these modes of existence as two ontologically separate realms of being it seems as though he has fallen into a pseudo-Cartesianism himself. What we have here is essentially the mind/body problem reconfigured in Sartrean terms.
+
+
+ 
+
+1st ontological dimension:
+
+
+     The first ontological dimension that Sartre describes is the body as being for-itself or, the body-for-itself. In this dimension of the body we get our own conscious experience of our bodies: our bodies as sensed and as experienced (Dillon 126). Martin Dillon, in the paper, 'Sartre on the Phenomenal Body and Merleau-Ponty’s Critique,' states on this dimension of the body, 'The body-for-itself is defined as the body apprehended from the perspective of the first person by consciousness in a nonthetic, prereflective mode' (Dillon 132). The first dimension of the phenomenal body is the body apprehended within situation, and the body experienced by a particular mode of consciousness. The apprehension of this dimension of the body includes the qualia that accompany experiences, the feelings of things, the essential 'what it is like'-ness of consciousness. The way in which we experience the first dimension of the body as described by Sartre may be analogous to a sort of phenomenal consciousness (perhaps as opposed to access consciousness as understood in contemporary analytic philosophy of mind).[2] It is the phenomenal awareness we have of any given experience that occurs before said experience is poised for rational thought or action. This is what it means for the first dimension of the body to be 'nonthetic,' or 'prereflective.'  Perhaps it is the case that as soon as we reflect on the body or on some sensation in this way, or as soon as we apprehend this type of pheneomenal experience for rational thought, the mode of consciousness changes. One might think of this as a natural and fluid movement between modes of consciousness, as opposed to conceiving of it as paradoxically being two things at once. Though the mode of consciousness that necessarily accompanies this ontological dimension of the body is nonthetic and prereflective, in the way just described, it is also not completely unrelated to the body. Sartre states, 'Of course on this level we encounter phenomena which appear to include within themselves some connection with the body: 'physical' pain, the uncomfortable, pleasure, etc.' (BN 404). The first dimension of the body illustrates a certain mode of consciousness, meaning that, '[…] it is the body as subject of its experience' (Dillon 127).
+
+        The body-for-itself may also be analogous with the idea of immanence. Dillon states, 'Insofar as one’s own body is manifest to oneself, insofar as it is revealed, meaningful, available, it may be regarded as immanent […]' (Dillon 122). For example, in the first dimension of the body we get experiences like the feeling of one’s pain, as this type of experience is completely internal, and immediately and only available to the subject experiencing it. It may be said that this is an experience of the immanence of the body (only I can feel my own pain). Immanence here may be equivalent to the first person perspective, or the phenomenality of experience. How is this fully interior, unshared experience which is characteristic of the first dimension of the body, to be reconciled with it’s ontological opposite and counterpart, the body-for-others, or the transcendent?
+
+2nd ontological dimension:
+
+
+The second ontological dimension of the body that Sartre describes is that wherein the body is experienced as the body-for-others, or the body in the world or in situation: '[...] it was with my body in the midst of the world and as it is for others. My body as it is for me does not appear to me in the midst of the world' (BN 402). This is additionally the dimension where we can understand our bodies in a new light via the process of reflection. For Sartre, the second ontological dimension of the body does rely upon the presence of the Other at least to a certain degree, but perhaps not in every instance of this ontological dimension. Perhaps we may think of this as the jumping off point from whence our own self-reflection stems. Yet at the same time, we hit a wall with Sartre at this point, because as he says that the body-for-others is the ground of our self-knowledge, he also illustrates the body-for-others as, 'lived unreflectively.' On this, Dillon states: '[...] there is nonetheless something paradoxical in the contention that the body-for-others is lived unreflectively. The other’s look is an anxiety provoking upheaval because it refers consciousness back to its incarnation in a point of view upon the world' (Dillon 130). The idea posited here of the body-for-others seems at least internally inconsistent. Is this so egregious that we must throw the idea out the window? Perhaps we could think of the body-for-others as unreflective when applied to the body of the other, and only reflective when the conscious focus of the subject returns from the body of the other back to the body of the subject. Is this yet another fluid movement between modes of consciousness? There is a significant problem here:
+
+Insofar as [the body-for-others] involves the immediate experience (of) being looked at, it seems to belong within the first ontological dimension, but, insofar as it involves the distance of reflective objectification, it seems to belong in the third dimension. These two dimensions, however, are defined as polar opposites in conscious modality: the first is nonthetic/prereflective, and the third is thetic/reflective (Dillon 130).
+
+
+What are we to make of this inconsistency? It seems perhaps too important to simply be swept to the side. Sartre does state that we are dealing with ontologically incommensurable realms of existence: '[…] we are dealing with two essentially different orders of reality' (BN 402). What is important to understand here is that Sartre posits the second dimension of the body as the body understood as instrument, as object. Perhaps this inconsistency lends itself to the idea that these dimensions of body are truly incommensurable. If this is the case for Sartre, then how can we conceive of a unified being? How can these disparate categories of substances exist coherently in the same body without committing Sartre to a type of Cartesian project that he wishes to avoid?
+
+For now, let us understand the body-for-others as the Other’s body apprehended from the third person perspective. As we have established, this may apply to a mode of consciousness in which one apprehends oneself in a new way, 'Of course, the discovery of my body as an object is indeed a revelation of its being. But the being which is thus revealed to me is its being-for-others' (BN 403). It sounds like what Sartre is implying here is that as I apprehend my body through the presence of the body of the Other, I am not apprehending my body in a reflective way, but what I apprehend is something alien to me and is also thus, unreflective. The presence and experience of the Other’s body causes the turning of one’s own consciousness back upon oneself. Subsequently we experience ourselves as objectified, alienated, and as instrument.
+
+If we grant Sartre this inconsistent dimension of the body, then this is the sense in which the body may be considered transcendent. Dillon states, 'The body lived as transcendent is the body conceived as alien' (Dillon 123). Sartre posits the body-for-others as analogous with the Other’s body: 'To study the way in which my body appears to the Other or the way in which the Other’s body appears to me amounts to the same thing' (BN 445). It is in this sense that we can understand our own bodies as others see them, from the third person perspective. For example, Sartre states:
+
+ 
+
+In the fundamental phenomenon of making an object of the Other, he appears to me as a transcendence-transcended. That is, by the mere fact that I project myself towards my possibilities, I surpass and transcend the Other’s transcendence (BN 446).
+
+This is what we experience when we perceive our bodies as though from the outside. It is necessary that in experiencing our bodies as transcendent, we are experiencing them as alien. Instances of these types of situations are those where, '[…] the body refuses to do as it is bid […]' are fairly common to us: the experience of bumping into a doorframe, or the inability to stop oneself from sneezing, or the impossibility of not yawning when we see someone else yawn (Dillon 123). All of these are ways in which we experience the body as transcendent, as object that is alien to us. What we get in the second dimension of the body seems somewhat problematic and paradoxical. How can the body-for-others be at once reflective and prereflective, thetic and nonthetic, transcendent but also immediately apprehended by our consciousness? We might say that Sartre characterizes the body-for-itself as sheer immanence and the body-for-others as sheer transcendence, and these are just as incompatible as mere transcendence and immanence alone. It seems that we have found Sartre complicit in some sort of at least pseudo-Cartesianism here despite his best efforts otherwise.
+
+ 3rd ontological dimension:
+
+The third ontological dimension of the body and perhaps the most perplexing is the body-for-itself-for-others. This is to be taken as the body as known by the other, and reflected upon by the subject. The body-for-itself-for-others is the ontological dimension wherein Sartre attempts to reconcile the two prior bodily dimensions into some sort of coherence but the task seems fairly intractable. Sartre states:
+
+
+There is a relation of the for-itself with the in-itself in the presence of the Other. When we have described this concrete fact, we shall be in a position to form conclusions concerning the fundamental relations of the three modes of being, and we shall perhaps be able to attempt a metaphysical theory of being in general (BN 472).
+
+
+Sartre describes the body-for-itself-for-others, as a relation between the for-itself and the in-itself as the two are not reducible to each other. It is through this relation that we, '[…] reflectively apprehend [the] body as 'my being-there-for-others.'' (Dillon 131). At this third ontological dimension of the body, we exist for ourselves as known by the Other, and not merely as objectified (as is the case in the second dimension of the body). Dillon illustrates the series of reflections involved in consciousness apprehending the third dimension of the body:
+
+As sensing/knowing, the body is not the object of consciousness in a thetic mode.
+As sensed/known, the body is the object of consciousness in a thetic mode.
+In thetic modes, the object of consciousness is not the consciousness positing it (i.e., the body known as object is an other in relation to the knowing/positing consciousness).
+Consciousness can know the body it inhabits only as the body of an other.
+Consciousness coincides with the body-for-itself (but cannot know this body).
+Consciousness is alienated from the body it knows. (Dillon 132).
+
+The reflections posited here show exactly how incoherent Sartre’s conception of the third dimension of consciousness truly is. We can see here that Sartre has characterized this dimension of the body as both known to consciousness and alien to consciousness. If we are to take the body-for-itself as sheer immanence, and the body-for-others as sheer transcendence then we do find that we have two, 'perfectly irreconcilable poles' (132). Yet, as we mentioned early on, Sartre specifically states that in this ontological project we should not, '[…] separate the two terms of a relation in order to try to join them together again later,' but in the third dimension of the body, this seems to be exactly what Sartre does (BN 33). Sartre has given us here an ontology that does exactly what he was working against. Perhaps we will find a better alternative to Cartesianism elsewhere.",
+`Merleau-Ponty_Ontology`="Much like Sartre’s purported project, Maurice Merleau-Ponty also claims to be offering an alternative to Cartesian philosophies in his phenomenal project. In his unfinished work, The Visible and the Invisible, Merleau-Ponty moves away from his previous project of investigating subjectivity, intersubjectivity, and consciousness, to an ontological project. As Merleau-Ponty’s late ontological work is very much influenced by his early work wherein he focuses predominantly on epistemological ideas of perception (Phenomenology of Perception, The Structure of Behavior, etc.), his ontological ideas are illustrated not only in metaphysical terms but also in epistemological terms familiar to his early works. In fact, in the work Merleau-Ponty’s Ontology, Dillon states that for Merleau-Ponty, 'Problems of knowing are at the same time problems of being. To give an account of what it is to know necessarily involves some reference to the nature of what there is to be known' (Dillon 2). This is to mean that Merleau-Ponty’s ontology is one that is written in terms of the primacy of phenomena and our experience of such, or at the very least, it is explained in this way.
+
+
+Response to Cartesianism:
+
+
+In the first chapter of The Visible and the Invisible (VI), 'Reflection and Interrogation,' Merleau-Ponty gives us his critique of reflective philosophies as an attempt to distance himself from this method. In the second half of this chapter, entitled, 'The Perceptual Faith and Reflection,' he specifically examines the reflective philosophical inquiry of Husserl and Descartes. Merleau-Ponty is taking issue with the way in which self-reflective philosophy conceives perceptual experience, sensation, and thought: 'With the conversion to reflection, perceiving and imagining are now only two modes of thinking' (Merleau-Ponty, VI, 29). This is to mean that in reflective interrogation, the experiences of perception, or of feeling, simply become reduced to the 'thought of perception,' and the 'thought of feeling,' removing the subject from the actual lived experience of such (29). This removal of the individual from the phenomenal world in its reflection upon its own thoughts—which then become the ground for an apodictic knowledge—is the problem that Merleau-Ponty finds with reflective philosophy and with the science that it hoped to ground. We see this removal of the subject from the world and the movement toward and objectivity via the subjective clearly in Husserl’s The Crisis of the European Sciences:
+
+Only a radical inquiry back into subjectivity—and specifically subjectivity which ultimately brings about all worldly-validity […] can make objective truth comprehensible and arrive at the ultimate ontic meaning of the world. (Husserl 69).
+
+
+This 'ultimate ontic meaning,' which Husserl posits of the world is exactly what Merleau-Ponty is taking issue with. While Husserl, '[Stands] above them all in [his] posture of epoché […]' Merleau-Ponty posits the individual, and thus the body in the world, truly experiencing it and not merely thinking about it (77). Merleau-Ponty states that the philosophy of reflection, '[…] thinks it can comprehend our natal bond with the world only by undoing it in order to remake it, only by constituting it, by fabricating it' (Merleau-Ponty, VI, 32). Merleau-Ponty explains that Husserl is attempting to ground apodictic knowledge, the ontic truth of the world, upon a thought of the world alone, he states: 'It is a question not of putting the perceptual faith in place of reflection, but on the contrary of taking into account the total situation, which involves reference from one to the other' (35). To Merleau-Ponty, Husserl and Descartes, are simply not seeing the entire picture: through their processes of doubt and epoché, they are seeing a mere fraction of what there is to be seen, realized and experienced of the world. If one allows that Sartre’s conception of the ontological dimensions of the body is at least pseudo-Cartesian, then one might extend Merleau-Ponty’s critique of reflective philosophies to Sartre’s conception as well.
+
+In place of this type of Cartesian or pseudo-Cartesian project, Merleau-Ponty posits a new, perhaps fully phenomenological ontology found in the 'The Intertwining -- The Chiasm,' chapter of The Visible and the Invisible. His ontology is illustrated in the terms, 'brute/wild/savage Being, the flesh, the chiasm/intertwining, etc.' (Dillon, Merleau-Ponty’s Ontology 153). Merleau-Ponty compares the visible and the invisible, the audible and the silent-- various perceptibles and imperceptibles.
+
+
+The Visible:
+
+To begin, Merleau-Ponty illustrates his idea of 'the visible,' (i.e., objects, other people, various things that exist in the world, etc.) how it is that we (our bodies) can see and experience: 'The visible about us seems to rest in itself. It is as though our vision were formed in the heart of the visible, or as though there were between it and us an intimacy as close as between the sea and the strand' (Merleau-Ponty, VI, 130-131). There is a sort of ineffable quality to the visible things that exist around us in the world to Merleau-Ponty, a 'closeness' or relation to, or between such. Merleau-Ponty states on this relatedness, 'Between the alleged colors and visibles, we would find anew the tissue that lines them, sustains them, nourishes them, and which for its part is not a thing, but a possibility, a latency, and a flesh of things' (133). Here we have the idea of the flesh of the world: that which exists as the means of vision and visible. Merleau-Ponty explains further, 'It is that the thickness of flesh between the seer and the thing is constitutive for the thing of its visibility as for the seer of his corporeity; it is not an obstacle between them, it is their means of communication' (135). For Merleau-Ponty, the flesh of the world is a sort of immaterial, non-substantial fascia—connecting and separating all things and beings within, 'The flesh is not matter, is not mind, is not substance' (139). In this ontology, the flesh of the world becomes a parallel to the flesh of the body. The flesh of one’s body is the means by which one experiences the flesh of the world. The flesh that Merleau-Ponty posits is that which makes up the ontological realm of the visible. It is within this realm where we find Merleau-Ponty’s phenomenal body. While this may be the case, it will still be important to have an understanding of the invisible as well.
+
+
+The Invisible:
+
+Merleau-Ponty uses this idea of the invisible as essentially that which imbues meaning into what is visible. It is the absence by which we understand a presence. In many of the working notes of The Visible and the Invisible, Merleau-Ponty goes into great detail about the nature of the invisible, and possible issues that arise in attempting this type of analysis. Though the working notes are incomplete, there are certain ideas that can be gleaned from them. He illustrates the nature of the existence of thoughts, of depth, absence, nothingness, silence, space, and time. All of these things are invisible and yet, we experience them first hand. One of the most poignant statements Merleau-Ponty makes about the invisible, is that, 'Meaning is invisible, but the invisible is not the contradictory of the visible: the visible itself has an invisible inner framework, and the in-visible is the secret counterpart of the visible, it appears only within it …' (215). This idea is applicable to all other imperceptibles, and their perceptible counterparts, i.e., the audible would have an inaudible framework. For Merleau-Ponty, it is the invisible, the dimension of depth, and the silent, that enliven and allow meaning within the visible, the tangible, and the audible. The invisible is always latent within the visible; it is the outline-- the negative space that can only exist in relation to, but never fully touching, an object. All that is perceptible to us as materiality, as flesh, is subtended by that which is imperceptible, and it is through this inherence of the invisible within the visible that the visible is made meaningful, 'Rather it is the invisible of this world, that which inhabits this world, sustains it, and renders it visible, its own and interior possibility, [that is] the Being of this being' (151). It is thus through the connection between the visible and the invisible, through the flesh of the world and the gaps between things that we may understand Merleau-Ponty’s conception of the ontological body.",
+`Onto_Body_and_Reversibility`="Though bodies and visibles are individuated and yet, at the same time all flesh, it is the idea of the reversibility of the flesh that makes Merleau-Ponty’s ontology perhaps more tenable than that of Sartre. One might ask whether Merleau-Ponty’s positing of the visible and the invisible commits him to just as much of a dualism as Sartre, but we will see through thesis of reversibility that this is not the case.
+
+The Phenomenal Body:
+
+The body for Merleau-Ponty is always situated in the world and continuous with it. It is perhaps hard to give an account of the phenomenal body for Merleau-Ponty without also giving an account of the world itself. In The Visible an the Invisible, Merleau-Ponty hopes to establish the body as a part of the flesh of the world, as a 'visible.' Merleau-Ponty states:
+
+ We have to reject the age-old assumptions that put the body in the world and the seer in the body, or conversely, the world and the body in the seer as in a box. Where are we to put the limit between the body and the world, since the world is flesh? (138).
+
+
+and again later:
+
+My body as a visible thing is contained within the full spectacle. But my seeing body subtends the visible body, and all the visibles with it. There is reciprocal insertion and intertwining of one in the other. (138).
+
+
+These excerpts illustrate the point that it is near impossible to describe the body as separate from the world for Merleau-Ponty. The body is necessarily continuous with the world and as we have established, the flesh of the body is a parallel to the flesh of the world. Merleau-Ponty states, '[…] everything said about the sensed body pertains to the whole of the sensible of which it is a part, and to the world' (138). As this is the case, the continuousness between the body and the world allows for the experience of reversibility. It is this particular aspect of Merlea-Ponty’s ontology that allows for it to go beyond some sort of substance dualism, and in this way makes it more successful in it’s project than that of Sartre.
+
+
+Reversibility:
+
+For Merleau-Ponty there is a reversibility of essentially every sense, but vision, touch, and hearing are focused upon in depth in 'The Chiasm' chapter. Merleau-Ponty states on the reversibility of touch:
+
+When one hand touches the other, the world of each opens upon that of the other because the operation is reversible at will, because they both belong (as we say) to one sole space of consciousness, because one sole man touches one sole thing through both hands. (Merleau-Ponty, VI 141)
+
+
+This phenomenon seems to go even deeper than described, but this is generally the idea of the reversibility of the flesh. Dillon explains that, 'There is nothing at all mystical about the phenomenon of reversibility. If you shake hands with yourself, there is an indistinction of subject and object: which hand is doing the feeling and which hand is being felt? …the two roles merge, although the two hands retain their separate identities' (Dillon 133). As we will see, it is exactly this idea of reversibility that will allow Merleau-Ponty’s ontology of body to, '[...] subtend the monism/dualism polarization' (157). The reversibility of touch according to Merleau-Ponty is the idea that, to touch is necessarily to be touched (161). Is the phenomenon of the look as reversible as the phenomena of the caress? Dillon explains that, 'It is the case that seeing requires a body capable of being seen just as touching requires a body capable of being touched' (161). Dillon brings up an important example posited by Merleau-Ponty in Eye and Mind:
+
+[…] Merleau-Ponty speaks of a reversal of roles between the painter and the visible spectacle he paints. In this context, Merleau-Ponty quotes a painter’s comment, 'In a forest, I have felt many times over that it was not I who was looking at the forest. I felt, on certain days, that it was rather the trees that were looking at me.' (161)
+
+
+As poetic as this sentiment may be, the idea must be stressed, that to project a human consciousness onto the trees in terms of 'their seeing me,' would not actually coincide with Merleau-Ponty’s theory. This example brings the question of equality into the discussion of reversibility, 'Do the trees see the painter as the painter sees the trees? Or is there an asymmetry such that the painter’s seeing of the trees is different from his being seen by them' (161)? Is the reversible relation between Seer and seen, Seen and seer, equal or does one position hold philosophical primacy over the other in Merleau-Ponty’s ontological work? Merleau-Ponty states, in the preface to Signs, 'Seer and seen are exactly interchangeable. The two glances are immobilized upon one another. Nothing can distract them and distinguish them from none another […]' (Merleau-Ponty, Signs, 16). The trees and all visible things operate as the other— they de-center the individual and allow the I-sense, the self, to be created:
+
+[…] The trees, like the mirror, let him become visible; they define a point of view on him which renders visible for him something that otherwise would remain invisible—his outside, his physiognomy, his carnal presence (162).
+
+
+According to Dillon, in Merleau-Ponty’s work, the trees, the mirror, not merely the Other, give placement and spatiality to the individual. In addition, anything within the category of the visible, also allows the experience of the reversible relation; i.e., the experience of seeing oneself from a different vantage point: that of the Other (166). In this way, Merleau-Ponty’s ontology succeeds where Sartre’s fails.
+
+The issue here is that one can take up the position of the Other and see oneself from this point, but while, 'The Other is indeed, my mirror, […] I cannot see through the eyes I see in the mirror' –meaning that this reversible relation is never fully complete (168). In his work Beyond Romance, Dillon states, 'Our skins separate us in space, and historical unfolding precludes the coincidence requisite to complete lucidity: we are adumbrated to ourselves and others; what allows us to know prevents us from knowing completely' (Dillon, Beyond Romance, 124). I can encroach upon the vantage point of the Other, I can be intertwined with this vantage point— this Other— but never fully see as they do, I can never completely know what they know. While this sounds like a very similar problem to the one that Sartre runs into in the third dimension ontological of the body, because Merleau-Ponty has not grounded his ontology of the body upon mutually exclusive categories, the issue here is far less substantial.",
+`Conclusion`="Nevertheless there is an indistinction between subject and object in this ontology, between touched and touching, between Seer and seen that allows Merleau-Ponty’s ontology to go beyond some such dualism:
+
+The indistinction between seeing and being seen lies within the sphere of my own—as yet unreflected—experience: my seeing is continuous with my being seen; I could not be one without the other, and here is no line of demarcation that can be drawn between the being of my body as subject and that of my body as object (Dillon, Merleau-Ponty’s Ontology 169).
+
+
+Because every visible thing is of the same ontological category, we do avoid the problems we find in Sartre’s ontology.  Merleau-Ponty posits an ontological homogeneity that is blatantly missing in Sartre’s work. It is Sartre’s positing of the for-itself and the in-itself, the body-for-itself, the body-for-others, and the body-for-itself-for-others where we run into problems. By positing explicit categorical terms, Sartre has relegated himself to a pseudo-Cartesianism. In his conception we get irreconcilable categories of being. Perhaps it seems especially egregious in Sartre’s ontology because he illustrates his project as attempting to overcome the exact problem to which he falls prey. In an attempt to unify body, mind, and world, Sartre has given us incommensurable ontological categories that may never be brought together as a cohesive whole. On the other hand, where Sartre fails, Merleau-Ponty succeeds. By positing of the flesh of the world as the element of being, and as that which unifies all existents, we do not run into these same types of issues that occur with Sartre’s incompatible ontological realms. Instead we are left a cohesive, continuous picture of body, consciousness, and world.")
+ 
+```
+</div>
+# Mallet
+```{r 'Mallet',eval=F}
+library(mallet)
+library(rJava)
+topic.model <- mallet::MalletLDA(num.topics=length(lp))
+#Throwing error Error in .jnew("cc/mallet/topics/RTopicModel", num.topics, alpha.sum, : java.lang.NoSuchMethodError: <init
+find.java <- function() {
+        for (root in c("HLM", "HCU")) for (key in c("Software\\JavaSoft\\Java Runtime Environment", 
+            "Software\\JavaSoft\\Java Development Kit")) {
+            hive <- try(utils::readRegistry(key, root, 2), 
+              silent = TRUE)
+            if (!inherits(hive, "try-error")) 
+              return(hive)
+        }
+        hive
+}
+find.java()
+Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_161')
+```
+
+
+# Frequencies
+```{r 'Create Corpus, DTM and Freq DF',results='asis'}
+library(tm)
+lp.corp <- lapply(lp,function(x){tm::VCorpus(tm::VectorSource(enc2utf8(x)))})
+Corpi <- lp.corp
+for (i in seq_along(Corpi)) {
+  print(i)
+  #remove punctuation
+#change to lower case
+Corpi[[i]]<- tm_map(Corpi[[i]], content_transformer(tolower))
+#Remove punctuation
+Corpi[[i]] <- tm_map(Corpi[[i]], removePunctuation)
+#Remove white space
+Corpi[[i]]<- tm_map(Corpi[[i]], stripWhitespace)
+#remove stop words
+Corpi[[i]]<- tm_map(Corpi[[i]],removeWords, stopwords("english"))
+Corpi[[i]][[2]] <-TermDocumentMatrix(Corpi[[i]])
+Corpi[[i]][[2]] <-as.matrix(Corpi[[i]][[2]])
+Corpi[[i]][[2]] <- sort(rowSums(Corpi[[i]][[2]]),decreasing = TRUE)
+Corpi[[i]][[2]] <-data.frame(word=names(Corpi[[i]][[2]]),freq=Corpi[[i]][[2]])
+}
+htmltools::tagList(lapply(Corpi,function(x){x[[2]] %>% DT::datatable(fillContainer = F,rownames = FALSE,width = 800,height=600)}))
+```
+# LDA
+```{r 'LDA'}
+library("topicmodels")
+library("tm")
+library("qdap")
+#https://distill.pub/2016/misread-tsne/
+#Package Rtsne
+lp.df <- as.data.frame(lapply(lp,enc2utf8)) %>% gather(key="Section",value="Text")
+lp.df <- qdap::sentSplit(lp.df,text.var="Text",rm.bracket = F)
+lp.vc <- lapply(lp.df$Section %>% unique,function(x,lp.df){lp.df$Text[lp.df$Section %in% x] %>% VectorSource() %>% VCorpus()},lp.df)
+lp.dtm <- lapply(lp.vc,function(x){x %>% DocumentTermMatrix(control=list(tolower=T,
+                                                      removePunctuation=T,
+                                                      stopwords=T
+                                                      ))})
+lp.dtm <- lapply(lp.dtm,function(x){rowTotals <- apply(x , 1, sum) #Find the sum of words in each Document
+dtm.new   <- x[rowTotals> 0, ]}) #Remove rows with no words
+lp.lda <- lapply(lp.dtm,function(x){topicmodels::LDA(x,k=3)})
+opicmodels_json_ldavis <- function(fitted, corpus, doc_term){
+    # Required packages
+    library(topicmodels)
+    library(dplyr)
+    library(stringi)
+    library(tm)
+    library(LDAvis)
+
+    # Find required quantities
+    phi <- posterior(fitted)$terms %>% as.matrix
+    theta <- posterior(fitted)$topics %>% as.matrix
+    vocab <- colnames(phi)
+    doc_length <- vector()
+    for (i in 1:length(corpus)) {
+        temp <- paste(corpus[[i]]$content, collapse = ' ')
+        doc_length <- c(doc_length, stri_count(temp, regex = '\\S+'))
+    }
+    temp_frequency <- doc_term %>% as.matrix
+    freq_matrix <- data.frame(ST = colnames(temp_frequency),
+                              Freq = colSums(temp_frequency))
+    rm(temp_frequency)
+    # Convert to json
+    json_lda <- LDAvis::createJSON(phi = phi, theta = theta,
+                            vocab = vocab,
+                            doc.length = doc_length,
+                            term.frequency = freq_matrix$Freq)
+
+    return(json_lda)
+}
+
+(lp.vc_fixed <- lp.dtm %>% lapply(.,FUN=function(dtm){ #dtm to corpus fn
+  dtm2list <- apply(dtm, 1, function(x) {
+    paste(rep(names(x), x), collapse=" ")
+})
+
+## convert to a Corpus
+myCorp <- VCorpus(VectorSource(dtm2list))
+}))
+lp.json <- purrr::pmap(list(corpus=lp.vc_fixed,doc_term=lp.dtm,fitted=lp.lda),opicmodels_json_ldavis)
+# convert DTMs to corpus using fn, k must be >=3, and inspect only returns 100 columns, use as.matrix on doc_terms instead)
+lapply(lp.json,LDAvis::serVis)
+```
+
+```{r 'WordClouds',results='asis'}
+nms <- names(Corpi)
+for (i in seq_along(Corpi)) {
+  htmltools::html_print(wordcloud2::wordcloud2(Corpi[[i]][[2]],size=.40,fontFamily = "Helvetica",fontWeight = "normal",color="random-light",backgroundColor = "#FFFFF",ellipticity = .2))
+  #htmlwidgets::saveWidget(wc,nms[i],selfcontained = F)
+}
+wordcloud2::wordcloud2(Corpi[[1]][[2]],size=.40,fontFamily = "Helvetica",fontWeight = "normal",color="random-light",backgroundColor = "#FFFFF",ellipticity = .2)
+```
+![](2.png)
+![](3.png)
+![](4.png)
+![](5.png)
+![](6.png)
