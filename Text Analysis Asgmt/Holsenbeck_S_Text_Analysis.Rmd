@@ -257,8 +257,15 @@ opicmodels_json_ldavis <- function(fitted, corpus, doc_term){
 myCorp <- VCorpus(VectorSource(dtm2list))
 }))
 lp.json <- purrr::pmap(list(corpus=lp.vc_fixed,doc_term=lp.dtm,fitted=lp.lda),opicmodels_json_ldavis)
-# convert DTMs to corpus using fn, k must be >=3, and inspect only returns 100 columns, use as.matrix on doc_terms instead)
-lapply(lp.json,LDAvis::serVis)
+# Because of subsetting columns with 0 representation, convert DTMs to corpus using fn
+#k must be >=3
+#inspect only returns 100 columns, use as.matrix on doc_terms instead)
+purrr::map2(lp.json,names(lp),function(.x,.y){
+  LDAvis::serVis(.x,out.dir=paste("LDAvis/",.y,sep=""),open.browser = T)
+                 }
+  )
+
+#Get optimal model #s any_models <- mclapply(seq(2, 35, by = 1), function(x) {LDA(Blog_DTM, x, method = "Gibbs", control = control_LDA_Gibbs)} )
 ```
 
 ```{r 'WordClouds',results='asis'}
