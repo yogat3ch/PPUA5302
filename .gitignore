@@ -7,10 +7,16 @@
 
 # RStudio files
 .Rproj.user/
-
+*_cache/
+*_files/
+*.RData
+*.rdb
+*.rdx
+Project 1/Data/
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
+.Rproj.user
